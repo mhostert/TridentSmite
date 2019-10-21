@@ -16,17 +16,25 @@
     #######################################################
 
 
-Generates trident events both in the Standard Model and with a Zprime.
+Generates neutrino trident events based on the calculation in the following papers:
+
+https://arxiv.org/abs/1807.10973
+https://arxiv.org/abs/1902.08579
 
 Requires a working installation of the CUBA integration library (see http://www.feynarts.de/cuba/).
 
 ## Usage
 
 After your own setup, you can run
+
+```
 	make 
 	./gen_SM (int)CHANNEL (int)Znumber (int)Anumber (0 or 1)Block (long double)Enumin (long double)Enumax
+```
 
 where CHANNEL stands for the desired trident channel where for the channel nu_a -> nu_b ell_c^+ ell_d^- = abcd, we have:
+
+```	
 	eeee 0
 	mmmm 1
 	emme 2
@@ -42,3 +50,4 @@ where CHANNEL stands for the desired trident channel where for the channel nu_a 
 	tmmt 12
 	ttee 13
 	ttmm 14
+```
