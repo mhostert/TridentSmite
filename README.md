@@ -21,20 +21,39 @@ Generates neutrino trident events based on the calculation in the following pape
 https://arxiv.org/abs/1807.10973
 https://arxiv.org/abs/1902.08579
 
-Requires a working installation of the CUBA integration library (see http://www.feynarts.de/cuba/).
+Requirements
+- working installation of the CUBA integration library (see http://www.feynarts.de/cuba/).
+- C++ boost (-lboost_program_options)
+
+See Makefile for environment variables.
 
 ## Usage
 
-After your own setup, you can run
+After your own setup of the code, you can run
 
 ```
 	make 
-	./gen_SM (int)CHANNEL (int)Znumber (int)Anumber (0 or 1)Block (long double)Enumin (long double)Enumax
+	./gen_SM --help
+
+	Allowed options:
+	  -h [ --help ]                         produce help message
+	  -c [ --channel ] arg (=1)             Trident channel
+	  -z [ --znumber ] arg (=1)             Proton number
+	  -a [ --anumber ] arg (=1)             Atomic number
+	  -b [ --pb ]                           Pauli Blocking
+	  -l [ --emin ] arg (=0.100000000000000005551)
+	                                        Minimum Enu
+	  -u [ --emax ] arg (=40)               Maximum Enu
+	  -f [ --fluxfile ] arg (=fluxes/uniform_0.1_200_GeV.dat)
+	                                        Neutrino flux file
+	  -m [ --mzprime ] arg (=1)             Zprime mass
+	  -g [ --gprime ] arg (=0)              Zprime coupling
+
 ```
 
-A few neutrino fluxes are available under "fluxes/", including files used for a uniform neutrino energy distribution. By specifying 'Enumin' and 'Enumax', one can sample only that energy window of the flux.
+A few neutrino fluxes are available under "fluxes/", including files used for a uniform neutrino energy distribution. By specifying 'emin' and 'emax', one can sample only that energy window of the flux.
 
-Whenever A>1, a coherent cross section is calculated. For A=1, if Z=0 (Z=1), then elastic scattering on neutrons (protons) is calculated. If Block=1, Pauli blocking effects are taken into account, otherwise these are ignored.
+Whenever A>1, a coherent cross section is calculated. For A=1, if Z=0 (Z=1), then elastic scattering on neutrons (protons) is calculated. If option -b(--pb) is set Pauli blocking effects are taken into account, otherwise these are ignored.
 
 CHANNEL stands for the desired trident channel where for the channel nu_a -> nu_b ell_c^+ ell_d^- = abcd, we have:
 
