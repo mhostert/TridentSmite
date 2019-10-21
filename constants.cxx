@@ -87,13 +87,15 @@ std::string getLastLine(std::ifstream& in)
     return line;
 }
 
-
-
-
+/////////////////////////////////////
 trident_channel::trident_channel(int C){
   switch (abs(C))
     {
       case eeee_flag:
+        PDG_nu_out = nue_flag;
+        PDG_nu_inc = nue_flag;
+        PDG_lm = e_flag;
+        PDG_lp = -e_flag;
         nu_alpha = e_flag;
         l1 = e_flag;
         l2 = e_flag;
@@ -103,6 +105,10 @@ trident_channel::trident_channel(int C){
         l2_name="e-";
         break;
       case mmmm_flag:
+        PDG_nu_out = numu_flag;
+        PDG_nu_inc = numu_flag;
+        PDG_lm = mu_flag;
+        PDG_lp = -mu_flag;
         nu_alpha = mu_flag;
         l1 = mu_flag;
         l2 = mu_flag;
@@ -112,6 +118,10 @@ trident_channel::trident_channel(int C){
         l2_name="mu-";
         break;
       case emme_flag:
+        PDG_nu_out = numu_flag;
+        PDG_nu_inc = nue_flag;
+        PDG_lm = e_flag;
+        PDG_lp = -mu_flag;
         nu_alpha = e_flag;
         l1 = e_flag;
         l2 = mu_flag;
@@ -121,6 +131,10 @@ trident_channel::trident_channel(int C){
         l2_name="e-";
         break;
       case mmee_flag:
+        PDG_nu_out = numu_flag;
+        PDG_nu_inc = numu_flag;
+        PDG_lm = e_flag;
+        PDG_lp = -e_flag;
         nu_alpha = mu_flag;
         l1 = e_flag;
         l2 = e_flag;
@@ -130,6 +144,10 @@ trident_channel::trident_channel(int C){
         l2_name="e-";
         break;
       case eemm_flag:
+        PDG_nu_out = nue_flag;
+        PDG_nu_inc = nue_flag;
+        PDG_lm = mu_flag;
+        PDG_lp = -mu_flag;
         nu_alpha = e_flag;
         l1 = mu_flag;
         l2 = mu_flag;
@@ -139,6 +157,10 @@ trident_channel::trident_channel(int C){
         l2_name="mu-";
         break;
       case meem_flag:
+        PDG_nu_out = nue_flag;
+        PDG_nu_inc = numu_flag;
+        PDG_lm = mu_flag;
+        PDG_lp = -e_flag;
         nu_alpha = mu_flag;
         l1 = mu_flag;
         l2 = e_flag;
@@ -149,6 +171,10 @@ trident_channel::trident_channel(int C){
         break;
       
       case eett_flag:
+        PDG_nu_out = nue_flag;
+        PDG_nu_inc = nue_flag;
+        PDG_lm = tau_flag;
+        PDG_lp = -tau_flag;
         nu_alpha = e_flag;
         l1 = tau_flag;
         l2 = tau_flag;
@@ -158,6 +184,10 @@ trident_channel::trident_channel(int C){
         l2_name="tau-";
         break;
       case mmtt_flag:
+        PDG_nu_out = nue_flag;
+        PDG_nu_inc = numu_flag;
+        PDG_lm = tau_flag;
+        PDG_lp = -tau_flag;
         nu_alpha = mu_flag;
         l1 = tau_flag;
         l2 = tau_flag;
@@ -167,6 +197,10 @@ trident_channel::trident_channel(int C){
         l2_name="tau-";
         break;
       case ette_flag:
+        PDG_nu_out = nutau_flag;
+        PDG_nu_inc = nue_flag;
+        PDG_lm = e_flag;
+        PDG_lp = -tau_flag;
         nu_alpha = e_flag;
         l1 = e_flag;
         l2 = tau_flag;
@@ -176,6 +210,10 @@ trident_channel::trident_channel(int C){
         l2_name="e-";
         break;
       case ttee_flag:
+        PDG_nu_out = nutau_flag;
+        PDG_nu_inc = nutau_flag;
+        PDG_lm = e_flag;
+        PDG_lp = -e_flag;
         nu_alpha = tau_flag;
         l1 = e_flag;
         l2 = e_flag;
@@ -185,6 +223,10 @@ trident_channel::trident_channel(int C){
         l2_name="e-";
         break;
       case ttmm_flag:
+        PDG_nu_out = nutau_flag;
+        PDG_nu_inc = nutau_flag;
+        PDG_lm = mu_flag;
+        PDG_lp = -mu_flag;
         nu_alpha = tau_flag;
         l1 = mu_flag;
         l2 = mu_flag;
@@ -194,6 +236,10 @@ trident_channel::trident_channel(int C){
         l2_name="mu-";
         break;
       case teet_flag:
+        PDG_nu_out = nue_flag;
+        PDG_nu_inc = nutau_flag;
+        PDG_lm = tau_flag;
+        PDG_lp = -e_flag;
         nu_alpha = tau_flag;
         l1 = tau_flag;
         l2 = e_flag;
@@ -204,6 +250,10 @@ trident_channel::trident_channel(int C){
         break;
 
         case tmmt_flag:
+        PDG_nu_out = numu_flag;
+        PDG_nu_inc = nutau_flag;
+        PDG_lm = tau_flag;
+        PDG_lp = -mu_flag;
         nu_alpha = tau_flag;
         l1 = tau_flag;
         l2 = mu_flag;
@@ -213,6 +263,10 @@ trident_channel::trident_channel(int C){
         l2_name="tau-";
         break;
       case tttt_flag:
+        PDG_nu_out = nutau_flag;
+        PDG_nu_inc = nutau_flag;
+        PDG_lm = tau_flag;
+        PDG_lp = -tau_flag;
         nu_alpha = tau_flag;
         l1 = tau_flag;
         l2 = tau_flag;
@@ -222,6 +276,10 @@ trident_channel::trident_channel(int C){
         l2_name="tau-";
         break;
       case mttm_flag:
+        PDG_nu_out = nutau_flag;
+        PDG_nu_inc = numu_flag;
+        PDG_lm = mu_flag;
+        PDG_lp = -tau_flag;
         nu_alpha = mu_flag;
         l1 = mu_flag;
         l2 = tau_flag;
@@ -235,6 +293,8 @@ trident_channel::trident_channel(int C){
     if (C<0)
     {
       channel_name=nu1_name+"bar_to_"+nu2_name+"bar_"+l1_name+"_"+l2_name;
+      PDG_nu_inc = -PDG_nu_inc;
+      PDG_nu_out = -PDG_nu_out;    
     }
     else{
       channel_name=nu1_name+"_to_"+nu2_name+"_"+l1_name+"_"+l2_name;

@@ -10,7 +10,7 @@ namespace po = boost::program_options;
 int main(int argc, char* argv[]) {
 
 
-  int C,A,Z,Block;
+  int C,A,Z,Block,NUMBER_OF_EVENTS;
   std::string run_number;
   long double Mz,gl,gnu;
   long double Emin,Emax;
@@ -20,20 +20,22 @@ int main(int argc, char* argv[]) {
   desc.add_options()
       ("help,h", 
           "produce help message")
-      ("channel,c", po::value<int>(& C)->default_value(1),
-          "Trident channel")
+      ("nevents,N", po::value<int>(& NUMBER_OF_EVENTS)->default_value(1e4),
+          "Number of HEPevt events to generate")
+     ("channel,c", po::value<int>(& C)->default_value(1),
+          "Trident channel to use (see README for definition)")
       ("znumber,z", po::value<int>(& Z)->default_value(1),
-          "Proton number")
+          "Target proton number")
       ("anumber,a", po::value<int>(& A)->default_value(1),
-          "Atomic number")
+          "Target mass number (e.g. A = 12 for Carbon)")
       ("pb,b",
-          "Pauli Blocking")
-      ("emin,l", po::value<long double>(& Emin)->default_value(0.1),
-          "Minimum Enu")
+          "Pauli blocking (only include if computing scattering on bound protons)")
+      ("emin,l", po::value<long double>(& Emin)->default_value(0.10),
+          "Minimum Enu to sample from")
       ("emax,u", po::value<long double>(& Emax)->default_value(40.0),
-          "Maximum Enu")
+          "Maximum Enu to sample from")
       ("fluxfile,f", po::value<std::string>(& fluxfile)->default_value("fluxes/uniform_0.1_200_GeV.dat"),
-          "Neutrino flux file")
+          "Neutrino flux file to use")
       ("mzprime,m", po::value<long double>(& Mz)->default_value(1.0),
           "Zprime mass")      
       ("gprime,g", po::value<long double>(& gl)->default_value(0.0),
@@ -117,7 +119,11 @@ int main(int argc, char* argv[]) {
 
 
   // SAVE EVENTS TO FILE
-  MC.generate_events(samplesfile, "events/MC_events_"+channel.channel_name+"_"+target+"_"+std::to_string((int)Emin)+"_"+std::to_string((int)Emax)+".dat");
+  std::string eventsfile="events/MC_events_"+channel.channel_name+"_"+target+"_"+std::to_string((int)Emin)+"_"+std::to_string((int)Emax)+".dat";
+  std::string hepevtfile="HEPevt/MC_events_"+channel.channel_name+"_"+target+".dat";
+
+  MC.generate_events(samplesfile,eventsfile);
+  MC.HEPevt_format(eventsfile,hepevtfile,NUMBER_OF_EVENTS);
 
   return 0;
 }

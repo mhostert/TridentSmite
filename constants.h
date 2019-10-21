@@ -45,9 +45,12 @@
 
 
 // Flags
-#define e_flag 0
-#define mu_flag 1
-#define tau_flag 2
+#define e_flag 11
+#define mu_flag 13
+#define tau_flag 15
+#define nue_flag 12
+#define numu_flag 14
+#define nutau_flag 16
 
 // BSM Flags
 #define ZPRIME 0
@@ -188,6 +191,7 @@ class trident_channel{
   // What channel is being simulated nu_alpha  -> nu l2^+ l1^- 
  	public:
  	int nu_alpha,l1,l2;
+ 	int PDG_nu_inc,PDG_nu_out,PDG_lp,PDG_lm,PDG_had;
  	std::string channel_name,nu1_name,nu2_name,l1_name,l2_name;
  	trident_channel(int C); 
 };

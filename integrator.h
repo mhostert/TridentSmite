@@ -21,12 +21,16 @@
 class tridentMC{
   public:
 
+
+    trident_channel channel(int C);
+
     int nu_alpha;
     int l1,l2,A,Z;
-
+    int PDG_nu_inc,PDG_nu_out,PDG_lp,PDG_lm,PDG_had;
     int IS_NUBAR = 0;
 
     long double ml1,ml2,Mn;
+
 
     // Will contain BSM parameters
     std::vector<long double> params;
@@ -83,8 +87,7 @@ class tridentMC{
 
     void generate_events(std::string , std::string );
 
-    std::vector<std::vector<long double>> histogram(long double xmin,long double xmax, int NBINS, int VAR_FLAG, std::string eventsfile);
-
+    void HEPevt_format(std::string , std::string , int );
 
     void remove_events(std::string eventsfile);
 

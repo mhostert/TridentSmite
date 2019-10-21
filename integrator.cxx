@@ -16,9 +16,13 @@ tridentMC::tridentMC(int C, int Z_arg, int A_arg, long double Mn_arg){
   nu_alpha = channel.nu_alpha;
   l1 = channel.l1;
   l2 = channel.l2;
+  PDG_lp = channel.PDG_lp; 
+  PDG_lm = channel.PDG_lm; 
+  PDG_nu_inc = channel.PDG_nu_inc;
+  PDG_nu_out = channel.PDG_nu_out;
+  PDG_had = channel.PDG_had;
 
   // Now assign the charged lepton masses
-
   switch (l1)
     {
       case e_flag:
@@ -500,5 +504,81 @@ void tridentMC::generate_events(std::string samplesfile, std::string eventsfile)
   ///////////////////////////////////
   // REMOVE integration samples file
   remove(samplesfile.c_str());
+}
+
+///////////////////////////////////////////////////////////////////////////////////////////////////////////
+void tridentMC::HEPevt_format(std::string eventsfile, std::string HEPevtfile, int NUMBER_OF_EVENTS)
+{
+  ///////////////////////////////////////////////////////
+  // READING SAMPLES FILE A
+  std::ifstream ifile(eventsfile.c_str());
+  ifile.precision(17);
+  std::cout<<"reading events file..."<<eventsfile.c_str()<<std::endl;
+  long double E,Q2,pp0,pp1,pp2,pp3,pm0,pm1,pm2,pm3,wf;
+  
+  int line_count=0;
+  long double max_wf = 0;
+
+  // Get the last number of iterations
+  std::string line;
+  
+  if (ifile.is_open())
+  {
+    while(std::getline(ifile,line))
+    {
+      std::istringstream iss(line);
+  
+      iss >> E >> Q2 >> pp0 >> pp1 >> pp2 >> pp3 >> pm0 >> pm1 >> pm2 >> pm3 >> wf;
+    
+      if (wf > max_wf)
+      {
+        max_wf = wf;
+      }
+      line_count++;
+    }
+  }
+  else{
+    std::cout << "ERROR! Not able to open events file." << std::endl;
+  }
+
+  //////////////////////////////////////////////////////////
+  // WRITING EVENT FILES AFTER ACCEPT/REJECT
+
+  std::ofstream outfile(HEPevtfile.c_str());
+  std::cout<<"opening HEPevtfile..."<<HEPevtfile.c_str()<<std::endl;
+  outfile.precision(17);
+
+  // Start reading file again
+  ifile.clear();
+  ifile.seekg(0);
+  for (int i = 0; i < NUMBER_OF_EVENTS; ++i)
+  {
+      if(std::getline(ifile,line))
+      {
+        std::istringstream iss(line);
+        iss >> E >> Q2 >> pp0 >> pp1 >> pp2 >> pp3 >> pm0 >> pm1 >> pm2 >> pm3 >> wf;
+
+        if ( wf/max_wf > UniformRand() )
+        {
+          // FIX ME -- INCLUDE THE STRUCK HADRON!
+          outfile <<i<<" "<<3<<std::endl;
+          outfile <<"1 "<<PDG_nu_inc<<" 0 0 0 0"<<E<<" 0.0 0.0 "<<E<<" 0.0 0.0 0.0 0.0 0.0"<<std::endl;
+          outfile <<"2 "<<PDG_lp<<" 0 0 0 0"<<pp0<<" "<<pp1<<" "<<pp2<<" "<<pp3<<" "<<ml2<<" 0.0 0.0 0.0 0.0"<<std::endl;
+          outfile <<"2 "<<PDG_lm<<" 0 0 0 0"<<pm0<<" "<<pm1<<" "<<pm2<<" "<<pm3<<" "<<ml1<<" 0.0 0.0 0.0 0.0"<<std::endl;
+        }
+      }
+      else
+      { 
+        ifile.clear();
+        ifile.seekg(0);
+      }
+  }
+  
+  ifile.close();
+  outfile.close();
+  
+  ///////////////////////////////////
+  // REMOVE original events file
+  // remove(eventsfile.c_str());
 }
 
