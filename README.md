@@ -37,15 +37,19 @@ After your own setup of the code, you can run
 
 	Allowed options:
 	  -h [ --help ]                         produce help message
-	  -c [ --channel ] arg (=1)             Trident channel
-	  -z [ --znumber ] arg (=1)             Proton number
-	  -a [ --anumber ] arg (=1)             Atomic number
-	  -b [ --pb ]                           Pauli Blocking
+	  -N [ --nevents ] arg (=10000)         Number of HEPevt events to generate
+	  -c [ --channel ] arg (=1)             Trident channel to use (see README for 
+	                                        definition)
+	  -z [ --znumber ] arg (=1)             Target proton number
+	  -a [ --anumber ] arg (=1)             Target mass number (e.g. A = 12 for 
+	                                        Carbon)
+	  -b [ --pb ]                           Pauli blocking (only include if 
+	                                        computing scattering on bound protons)
 	  -l [ --emin ] arg (=0.100000000000000005551)
-	                                        Minimum Enu
-	  -u [ --emax ] arg (=40)               Maximum Enu
+	                                        Minimum Enu to sample from
+	  -u [ --emax ] arg (=40)               Maximum Enu to sample from
 	  -f [ --fluxfile ] arg (=fluxes/uniform_0.1_200_GeV.dat)
-	                                        Neutrino flux file
+	                                        Neutrino flux file to use
 	  -m [ --mzprime ] arg (=1)             Zprime mass
 	  -g [ --gprime ] arg (=0)              Zprime coupling
 

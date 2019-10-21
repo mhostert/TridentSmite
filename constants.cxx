@@ -51,6 +51,13 @@ int Momentum_contains_nans(const std::vector<long double> &P){
     } 
   return 0;
 }
+int is_nan(long double x){
+  if(x!=x)
+    {
+      return 1;
+    } 
+  return 0;
+}
 
 void pretty_print(std::string CHANNEL){  
   std::cout<<"TRIDENT CHANNEL:\n"<<CHANNEL<<"\n\n";

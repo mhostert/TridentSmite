@@ -179,6 +179,7 @@ long double UniformRand();
 long double NormalRand(long double mean, long double stddev);
 
 // Does it have nans?
+int is_nan(long double x);
 int Momentum_contains_nans(const std::vector<long double> &P);
 
 // strings and printing

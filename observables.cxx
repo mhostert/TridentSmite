@@ -88,16 +88,16 @@ std::vector<long double> S_to_LAB_params(const long double mjarg, const long dou
   long double cosminus = (epsilon1*b_minus - eta0*a_minus)/(epsilon1*Pminus*sqrt(shat));
   long double sinminus = sqrt(1-cosminus*cosminus);
   
-  if (abs(cosplus)>1.0 || abs(sinplus)>1.0)
-  {
-    std::cout<<"ERROR! SIN or COS of plus."<<std::endl;
-    std::cout<<cosplus<<std::endl;
-  }
+  // if (abs(cosplus)>1.0 || abs(sinplus)>1.0)
+  // {
+  //   std::cout<<"ERROR! SIN or COS of plus."<<std::endl;
+  //   std::cout<<cosplus<<std::endl;
+  // }
 
-  if (abs(cosminus)>1.0 || abs(sinminus)>1.0)
-  {
-    std::cout<<"ERROR! SIN or COS of minus."<<std::endl;
-  }
+  // if (abs(cosminus)>1.0 || abs(sinminus)>1.0)
+  // {
+  //   std::cout<<"ERROR! SIN or COS of minus."<<std::endl;
+  // }
 
   long double cosp2 = (epsilon1*b2 - eta0*a2)/(epsilon1*Pp2*sqrt(shat));
   long double sinp2 = sqrt(1-cosp2*cosp2);
@@ -163,15 +163,15 @@ std::vector<long double> P_plus_Sframe(const long double mjarg, const long doubl
   long double cosminus = (epsilon1*b_minus - eta0*a_minus)/(epsilon1*Pminus*sqrt(shat));
   long double sinminus = sqrt(1-cosminus*cosminus);
   
-  if (abs(cosplus)>1.0 || abs(sinplus)>1.0)
-  {
-    std::cout<<"ERROR! SIN or COS of plus."<<std::endl;
-  }
+  // if (abs(cosplus)>1.0 || abs(sinplus)>1.0)
+  // {
+  //   std::cout<<"ERROR! SIN or COS of plus."<<std::endl;
+  // }
 
-  if (abs(cosminus)>1.0 || abs(sinminus)>1.0)
-  {
-    std::cout<<"ERROR! SIN or COS of minus."<<std::endl;
-  }
+  // if (abs(cosminus)>1.0 || abs(sinminus)>1.0)
+  // {
+  //   std::cout<<"ERROR! SIN or COS of minus."<<std::endl;
+  // }
 
   long double cosp2 = (epsilon1*b2 - eta0*a2)/(epsilon1*Pp2*sqrt(shat));
   long double sinp2 = sqrt(1-cosp2*cosp2);
@@ -256,15 +256,15 @@ std::vector<long double> P_minus_Sframe(const long double mjarg, const long doub
   long double cosminus = (epsilon1*b_minus - eta0*a_minus)/(epsilon1*Pminus*sqrt(shat));
   long double sinminus = sqrt(1.-cosminus*cosminus);
   
-  if (abs(cosplus)>1.0 || abs(sinplus)>1.0)
-  {
-    std::cout<<"ERROR! SIN or COS of plus."<<std::endl;
-  }
+  // if (abs(cosplus)>1.0 || abs(sinplus)>1.0)
+  // {
+  //   std::cout<<"ERROR! SIN or COS of plus."<<std::endl;
+  // }
 
-  if (abs(cosminus)>1.0 || abs(sinminus)>1.0)
-  {
-    std::cout<<"ERROR! SIN or COS of minus."<<std::endl;
-  }
+  // if (abs(cosminus)>1.0 || abs(sinminus)>1.0)
+  // {
+  //   std::cout<<"ERROR! SIN or COS of minus."<<std::endl;
+  // }
 
   long double cosp2 = (epsilon1*b2 - eta0*a2)/(epsilon1*Pp2*sqrt(shat));
   long double sinp2 = sqrt(1-cosp2*cosp2);

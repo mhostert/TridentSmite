@@ -23,7 +23,7 @@ tridentMC::tridentMC(int C, int Z_arg, int A_arg, long double Mn_arg){
   PDG_had = channel.PDG_had;
 
   // Now assign the charged lepton masses
-  switch (l1)
+  switch (abs(l1))
     {
       case e_flag:
         ml1 = m_e;
@@ -36,7 +36,7 @@ tridentMC::tridentMC(int C, int Z_arg, int A_arg, long double Mn_arg){
         break;
     }
 
-  switch (l2)
+  switch (abs(l2))
     {
       case e_flag:
         ml2 = m_e;
@@ -67,13 +67,13 @@ tridentMC::tridentMC(int C, int Z_arg, int A_arg, long double Mn_arg){
   }
 
   //   Define the proper axial and vector coefficients for nu(nu_alpha), l-(l1) and l+(l2)
-  if (nu_alpha == l1)
+  if (nu_alpha == abs(l1))
   {
-    if (l1 == l2){Aijk = 0.5; Vijk = 0.5 + 2*sw2;}
-    else if (l1 != l2) {Aijk = 1.0; Vijk = 1.0;}
+    if (abs(l1) == abs(l2)){Aijk = 0.5; Vijk = 0.5 + 2*sw2;}
+    else if (abs(l1) != abs(l2)) {Aijk = 1.0; Vijk = 1.0;}
     else {printf("Error! Flags for the leptons not well defined or not listed.");}
   }
-  else if (nu_alpha != l1)
+  else if (nu_alpha != abs(l1))
   {
     Aijk = -0.5; Vijk = -0.5 + 2*sw2;
   }
@@ -117,7 +117,7 @@ void tridentMC::open_flux_file(std::string flux_file, long double elow, long dou
       }
 
       Evec.push_back(line[0]);
-      dPHIdE.push_back(line[nu_alpha+1+3*IS_NUBAR]);
+      dPHIdE.push_back(line[ ( abs(nu_alpha)-12)/2 +1+3*IS_NUBAR]);
     
     }
   }
@@ -361,14 +361,6 @@ void tridentMC::generate_events(std::string samplesfile, std::string eventsfile)
 
   maxiter = iter;
 
-  // Start reading file again
-  ifile.clear();
-  ifile.seekg(0);
-
-
-  // Start reading file again
-  ifile.clear();
-  ifile.seekg(0);
   //////////////////////////////////////////////////////////
   // WRITING EVENT FILES WITH WEIGHT
 
@@ -469,7 +461,7 @@ void tridentMC::generate_events(std::string samplesfile, std::string eventsfile)
       // Pp = P_plus_Sframe(mj, mk, Mn, row);
 
 
-      if (!Momentum_contains_nans(Pp) && !Momentum_contains_nans(Pm))
+      if (!Momentum_contains_nans(Pp) && !Momentum_contains_nans(Pm) && !(is_nan(x1)) && !(is_nan(x9)) && !(is_nan(f*w * std_f / (std[iter-1]))) )
       {
 
         // if (counter2 >= NSTART)
@@ -486,6 +478,7 @@ void tridentMC::generate_events(std::string samplesfile, std::string eventsfile)
             << Pm[2]<< " "
             << Pm[3]<< " "
             << f*w * std_f / (std[iter-1])  << std::endl;
+
         }
         counter2+=1;
       }
@@ -517,23 +510,26 @@ void tridentMC::HEPevt_format(std::string eventsfile, std::string HEPevtfile, in
   long double E,Q2,pp0,pp1,pp2,pp3,pm0,pm1,pm2,pm3,wf;
   
   int line_count=0;
-  long double max_wf = 0;
+  long double sum_wf = 0;
 
   // Get the last number of iterations
-  std::string line;
+  std::string line,dummyline;
   
   if (ifile.is_open())
   {
+    std::getline(my_flux, dummyline);  // Skip header!
+    std::getline(my_flux, dummyline);  // Skip header!
+
     while(std::getline(ifile,line))
     {
       std::istringstream iss(line);
   
       iss >> E >> Q2 >> pp0 >> pp1 >> pp2 >> pp3 >> pm0 >> pm1 >> pm2 >> pm3 >> wf;
-    
-      if (wf > max_wf)
+      if (sum_wf<wf)
       {
-        max_wf = wf;
+        sum_wf = wf;
       }
+
       line_count++;
     }
   }
@@ -541,7 +537,9 @@ void tridentMC::HEPevt_format(std::string eventsfile, std::string HEPevtfile, in
     std::cout << "ERROR! Not able to open events file." << std::endl;
   }
 
+  std::cout<<"Max weight = "<<sum_wf<<std::endl;
   //////////////////////////////////////////////////////////
+
   // WRITING EVENT FILES AFTER ACCEPT/REJECT
 
   std::ofstream outfile(HEPevtfile.c_str());
@@ -551,26 +549,37 @@ void tridentMC::HEPevt_format(std::string eventsfile, std::string HEPevtfile, in
   // Start reading file again
   ifile.clear();
   ifile.seekg(0);
-  for (int i = 0; i < NUMBER_OF_EVENTS; ++i)
+  std::getline(my_flux, dummyline);  // Skip header!
+  std::getline(my_flux, dummyline);  // Skip header!
+
+  int i = 0;
+  while (i < NUMBER_OF_EVENTS)
   {
       if(std::getline(ifile,line))
       {
         std::istringstream iss(line);
-        iss >> E >> Q2 >> pp0 >> pp1 >> pp2 >> pp3 >> pm0 >> pm1 >> pm2 >> pm3 >> wf;
+        if(!(iss >> E >> Q2 >> pp0 >> pp1 >> pp2 >> pp3 >> pm0 >> pm1 >> pm2 >> pm3 >> wf)){
+          // std::cout<<E <<" "<< Q2 <<" "<< pp0 <<" "<< pp1 <<" "<< pp2 <<" "<< pp3 <<" "<< pm0 <<" "<< pm1 <<" "<< pm2 <<" "<< pm3 <<" "<< wf<<std::endl;
+          continue;
+        }
 
-        if ( wf/max_wf > UniformRand() )
+        if ( wf/sum_wf > UniformRand() )
         {
           // FIX ME -- INCLUDE THE STRUCK HADRON!
           outfile <<i<<" "<<3<<std::endl;
-          outfile <<"1 "<<PDG_nu_inc<<" 0 0 0 0"<<E<<" 0.0 0.0 "<<E<<" 0.0 0.0 0.0 0.0 0.0"<<std::endl;
-          outfile <<"2 "<<PDG_lp<<" 0 0 0 0"<<pp0<<" "<<pp1<<" "<<pp2<<" "<<pp3<<" "<<ml2<<" 0.0 0.0 0.0 0.0"<<std::endl;
-          outfile <<"2 "<<PDG_lm<<" 0 0 0 0"<<pm0<<" "<<pm1<<" "<<pm2<<" "<<pm3<<" "<<ml1<<" 0.0 0.0 0.0 0.0"<<std::endl;
+          outfile <<"1 "<<PDG_nu_inc<<" 0 0 0 0 "<<E<<" 0.0 0.0 "<<E<<" 0.0 0.0 0.0 0.0 0.0"<<std::endl;
+          outfile <<"2 "<<PDG_lp<<" 0 0 0 0 "<<pp0<<" "<<pp1<<" "<<pp2<<" "<<pp3<<" "<<ml2<<" 0.0 0.0 0.0 0.0"<<std::endl;
+          outfile <<"2 "<<PDG_lm<<" 0 0 0 0 "<<pm0<<" "<<pm1<<" "<<pm2<<" "<<pm3<<" "<<ml1<<" 0.0 0.0 0.0 0.0"<<std::endl;
+          i++;
         }
       }
       else
       { 
         ifile.clear();
         ifile.seekg(0);
+        std::getline(my_flux, dummyline);  // Skip header!
+        std::getline(my_flux, dummyline);  // Skip header!
+
       }
   }
   
@@ -579,6 +588,6 @@ void tridentMC::HEPevt_format(std::string eventsfile, std::string HEPevtfile, in
   
   ///////////////////////////////////
   // REMOVE original events file
-  // remove(eventsfile.c_str());
+  remove(eventsfile.c_str());
 }
 
