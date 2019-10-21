@@ -53,17 +53,7 @@ int Momentum_contains_nans(const std::vector<long double> &P){
 }
 
 void pretty_print(std::string CHANNEL){  
-
-  std::cout<<",,,,,,,,,,,,,,\n";
   std::cout<<"TRIDENT CHANNEL:\n"<<CHANNEL<<"\n\n";
-
-   std::cout<<"                    xxxxxxxxx\n";
-  std::cout<<"                   xx\n";
-  std::cout<<"nu               xx           \n";
-  std::cout<<"xxxxxxxxxxxxxxxxxxxxxxxxxxxxxx\n";
-  std::cout<<"                 xx\n";
-  std::cout<<"                   xx         \n";
-  std::cout<<"                     xxxxxxxxx\n";
 }
 
 
