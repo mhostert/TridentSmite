@@ -1,10 +1,12 @@
-# Trident Smite!
-
-#                           l-
-#                    xxxxxxxxx
-#                   xx
-# nu               xx       nu  
-# xxxxxxxxxxxxxxxxxxxxxxxxxxxx
-#                  xx
-#                   xx      l+  
-#                    xxxxxxxxx
+    #___ ____ _ ___  ____ _  _ ___ ____ _  _ _ ___ ____ 
+    # |  |__/ | |  \ |___ |\ |  |  [__  |\/| |  |  |___ 
+    # |  |  \ | |__/ |___ | \|  |  ___] |  | |  |  |___ 
+                                                   
+    #                                 
+    #                        xxxxxxxxx
+    #                       xx
+    #                      xx           
+    #     xxxxxxxxxxxxxxxxxxxxxxxxxxxx
+    #                      xx
+    #                       xx          
+    #                        xxxxxxxxx
