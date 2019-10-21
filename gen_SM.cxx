@@ -48,8 +48,6 @@ int main(int argc, char* argv[]) {
   std::string samplesfile = "samples/temp_"+sList[C]+"_"+std::to_string(Z)+"_"+std::to_string(A)+"_"+std::to_string(Block)+"_"+std::to_string(Emax);
 
 
-  // fluxfile   = "fluxes/DUNE/DUNE_flux_ND_numode_459m_3horn_62.4GeV_1.83POT_2m.dat";
-  // fluxfile   = "fluxes/DUNE/DUNE_flux_ND_nubarmode_459m_3horn_62.4GeV_1.83POT_2m.dat";
   fluxfile   = "fluxes/uniform_0.1_200_GeV.dat";
 
 

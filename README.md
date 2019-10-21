@@ -32,7 +32,11 @@ After your own setup, you can run
 	./gen_SM (int)CHANNEL (int)Znumber (int)Anumber (0 or 1)Block (long double)Enumin (long double)Enumax
 ```
 
-where CHANNEL stands for the desired trident channel where for the channel nu_a -> nu_b ell_c^+ ell_d^- = abcd, we have:
+A few neutrino fluxes are available under "fluxes/", including files used for a uniform neutrino energy distribution. By specifying 'Enumin' and 'Enumax', one can sample only that energy window of the flux.
+
+Whenever A>1, a coherent cross section is calculated. For A=1, if Z=0 (Z=1), then elastic scattering on neutrons (protons) is calculated. If Block=1, Pauli blocking effects are taken into account, otherwise these are ignored.
+
+CHANNEL stands for the desired trident channel where for the channel nu_a -> nu_b ell_c^+ ell_d^- = abcd, we have:
 
 ```	
 	eeee 0
