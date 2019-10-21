@@ -188,7 +188,7 @@ class trident_channel{
   // What channel is being simulated nu_alpha  -> nu l2^+ l1^- 
  	public:
  	int nu_alpha,l1,l2;
- 	std::string channel_name;
+ 	std::string channel_name,nu1_name,nu2_name,l1_name,l2_name;
  	trident_channel(int C); 
 };
 

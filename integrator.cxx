@@ -4,7 +4,13 @@
 
 // Constructor defines nu flavours, trident channel and target nucleus
 tridentMC::tridentMC(int C, int Z_arg, int A_arg, long double Mn_arg){
+  
 
+  if (C < 0)
+  {
+    C = -C;
+    IS_NUBAR = 1; 
+  }else{IS_NUBAR=0;}
 
   trident_channel channel(C);
   nu_alpha = channel.nu_alpha;
@@ -204,8 +210,8 @@ long double tridentMC::integrate_wflux_wsamples(void * integrando, int ndim, std
     // MINEVAL, MAXEVAL, NNEW, NMIN,
     // FLATNESS, STATEFILE, SPIN, &regions,
     // &neval, &fail, integral, error, chi2prob);
-
-    std::cout<<"\n\nNeeded "<<regions<<" regions and "<<neval<<" evaluations in Suave (my counter ="<<counter<<")"<<std::endl;
+    // std::cout<<"\n\nNeeded "<<regions<<" regions and "<<neval<<" evaluations in Suave (my counter ="<<counter<<")"<<std::endl;
+    
     std::cout<<"Integral: "<<integral[0]<<"+-"<<error[0]<<", Chi2 prob: "<<chi2prob[0]<<std::endl;
 
   }
@@ -339,12 +345,15 @@ void tridentMC::generate_events(std::string samplesfile, std::string eventsfile)
 
   // Get the last number of iterations
   std::string line;
-  if (ifile)
+  if (ifile.is_open())
   {
     line = getLastLine(ifile);
     std::istringstream iss(line);
     iss >> x1 >> x2 >> x3 >> x4 >> x5 >> x6 >> x7 >> x8 >> x9 >> f >> w >> iter;
-  }else{std::cout << "ERROR! Not able to read integration file." << std::endl;}
+  }
+  else{
+    std::cout << "ERROR! Not able to read integration file." << std::endl;
+  }
 
   maxiter = iter;
 
@@ -374,11 +383,11 @@ void tridentMC::generate_events(std::string samplesfile, std::string eventsfile)
     std::istringstream iss(line);
     if(!(iss >> x1 >> x2 >> x3 >> x4 >> x5 >> x6 >> x7 >> x8 >> x9 >> f >> w >> iter))
     {
-      std::cout << "ERROR! Not able to read samples file." << std::endl;
-      break;
+      // NaN's in the sample file.
+      continue;
+      // FIX ME -- add a measure of NaNs here too.
+
     }
-    
-    // iss >> x1 >> x2 >> x3 >> x4 >> x5 >> x6 >> x7 >> x8 >> x9 >> f >> w >> iter;
 
     if (iter <= maxiter)
     {

@@ -91,99 +91,153 @@ std::string getLastLine(std::ifstream& in)
 
 
 trident_channel::trident_channel(int C){
-  switch (C)
+  switch (abs(C))
     {
       case eeee_flag:
         nu_alpha = e_flag;
         l1 = e_flag;
         l2 = e_flag;
-        channel_name = "nue -> nue e+ e-";
+        nu1_name="nue";
+        nu2_name="nue";
+        l1_name="e+";
+        l2_name="e-";
         break;
       case mmmm_flag:
         nu_alpha = mu_flag;
         l1 = mu_flag;
         l2 = mu_flag;
-        channel_name = "numu -> numu mu+ mu-";
+        nu1_name="numu";
+        nu2_name="numu";
+        l1_name="mu+";
+        l2_name="mu-";
         break;
       case emme_flag:
         nu_alpha = e_flag;
         l1 = e_flag;
         l2 = mu_flag;
-        channel_name = "nue -> numu mu+ e-";
+        nu1_name="nue";
+        nu2_name="numu";
+        l1_name="mu+";
+        l2_name="e-";
         break;
       case mmee_flag:
         nu_alpha = mu_flag;
         l1 = e_flag;
         l2 = e_flag;
-        channel_name = "numu -> numu e+ e-";
+        nu1_name="numu";
+        nu2_name="numu";
+        l1_name="e+";
+        l2_name="e-";
         break;
       case eemm_flag:
         nu_alpha = e_flag;
         l1 = mu_flag;
         l2 = mu_flag;
-        channel_name = "nue -> nue mu+ mu-";
+        nu1_name="nue";
+        nu2_name="nue";
+        l1_name="mu+";
+        l2_name="mu-";
         break;
       case meem_flag:
         nu_alpha = mu_flag;
         l1 = mu_flag;
         l2 = e_flag;
-        channel_name = "numu -> nue e+ mu-";
+        nu1_name="numu";
+        nu2_name="nue";
+        l1_name="e+";
+        l2_name="mu-";
         break;
       
       case eett_flag:
         nu_alpha = e_flag;
         l1 = tau_flag;
         l2 = tau_flag;
-        channel_name = "nue -> nue tau+ tau-";
+        nu1_name="nue";
+        nu2_name="nue";
+        l1_name="tau+";
+        l2_name="tau-";
         break;
       case mmtt_flag:
         nu_alpha = mu_flag;
         l1 = tau_flag;
         l2 = tau_flag;
-        channel_name = "nue -> nue tau+ tau-";
+        nu1_name="nue";
+        nu2_name="nue";
+        l1_name="tau+";
+        l2_name="tau-";
         break;
       case ette_flag:
         nu_alpha = e_flag;
         l1 = e_flag;
         l2 = tau_flag;
-        channel_name = "nue -> nutau tau+ e-";
+        nu1_name="nue";
+        nu2_name="nutau";
+        l1_name="tau+";
+        l2_name="e-";
         break;
       case ttee_flag:
         nu_alpha = tau_flag;
         l1 = e_flag;
         l2 = e_flag;
-        channel_name = "nutau -> nutau e+ e-";
+        nu1_name="nutau";
+        nu2_name="nutau";
+        l1_name="e+";
+        l2_name="e-";
         break;
       case ttmm_flag:
         nu_alpha = tau_flag;
         l1 = mu_flag;
         l2 = mu_flag;
-        channel_name = "nutau -> nutau mu+ mu-";
+        nu1_name="nutau";
+        nu2_name="nutau";
+        l1_name="mu+";
+        l2_name="mu-";
         break;
       case teet_flag:
         nu_alpha = tau_flag;
         l1 = tau_flag;
         l2 = e_flag;
-        channel_name = "nutau -> nue e+ tau-";        
+        nu1_name="nutau";
+        nu2_name="nue";
+        l1_name="e+";
+        l2_name="tau-";        
         break;
 
         case tmmt_flag:
         nu_alpha = tau_flag;
         l1 = tau_flag;
         l2 = mu_flag;
-        channel_name = "nutau -> numu mu+ tau-";
+        nu1_name="nutau";
+        nu2_name="numu";
+        l1_name="mu+";
+        l2_name="tau-";
         break;
       case tttt_flag:
         nu_alpha = tau_flag;
         l1 = tau_flag;
         l2 = tau_flag;
-        channel_name = "nutau -> nutau tau+ tau-";
+        nu1_name="nutau";
+        nu2_name="nutau";
+        l1_name="tau+";
+        l2_name="tau-";
         break;
       case mttm_flag:
         nu_alpha = mu_flag;
         l1 = mu_flag;
         l2 = tau_flag;
-        channel_name = "numu -> nutau tau+ mu-";
+        nu1_name="numu";
+        nu2_name="nutau";
+        l1_name="tau+";
+        l2_name="mu-";
         break;
     }
+
+    if (C<0)
+    {
+      channel_name=nu1_name+"bar_to_"+nu2_name+"bar_"+l1_name+"_"+l2_name;
+    }
+    else{
+      channel_name=nu1_name+"_to_"+nu2_name+"_"+l1_name+"_"+l2_name;
+    }
+
 }
