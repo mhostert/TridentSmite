@@ -1,6 +1,7 @@
 #ifndef INTEGRANDS_H_
 #define INTEGRANDS_H_
 
+
 #include <cmath>
 #include <cstdlib>
 #include <cstdio>
@@ -11,6 +12,8 @@
 #include <fstream>
 #include <sstream>
 #include <ctime>
+
+using namespace std::chrono;
 
 #include "cuba.h"
 #include "constants.h"

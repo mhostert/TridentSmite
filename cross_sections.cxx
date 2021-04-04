@@ -2,7 +2,7 @@
 #include "integrator.h"
 
 
-std::vector<long double> CohFromIntToPhysical_Efixed(const cubareal xx[], void *userdata){
+int CohFromIntToPhysical_Efixed(const cubareal xx[], void *MC){
 
   long double u1_s    = xx[0];
   long double u2_s    = xx[1];
@@ -20,16 +20,15 @@ std::vector<long double> CohFromIntToPhysical_Efixed(const cubareal xx[], void *
   //////////////////////////////////////////////////
   // get data from user
 
-  tridentMC* myMC = (tridentMC *)userdata;
+  tridentMC* myMC = (tridentMC *)MC;
   
   long double ml1 = myMC->ml1;
   long double ml2 = myMC->ml2;
   long double A = myMC->A;
   long double Z = myMC->Z;
   long double Mn = myMC->Mn;
+  long double mzprime = myMC->mzprime;
 
-  long double mzprime;
-  mzprime = myMC->params[1];
 
   long double Diag11 = myMC->terms[0];
   long double Diag22 = myMC->terms[1];
@@ -42,7 +41,6 @@ std::vector<long double> CohFromIntToPhysical_Efixed(const cubareal xx[], void *
   ////////////////////////////////////////////////////
   // FIXED neutrino energy 
   long double Enu = myMC->nu_energy;
-
 
   //////////////////////////////////
   long double x1_u = 2*SQR(Enu) / ( 1 + 2 * Enu/Mn ) * ( 1 - SQR(ml1+ml2)/2.0/SQR(Enu) * (1 + Enu/Mn) +
@@ -117,62 +115,71 @@ std::vector<long double> CohFromIntToPhysical_Efixed(const cubareal xx[], void *
   long double m6_l = 0;
   long double m6_u = 2*E1*E2;
 
-  if (BSM == SMonly)
+  switch ((int) BSM) 
   {
-    u6_l = m6_l;
-    u6_u = m6_u;
-    u6   = u6_s*(u6_u - u6_l) + u6_l;
-    m6 = u6;
-    jacob_u6 = 1.0;
+    case (SMonly):
+      u6_l = m6_l;
+      u6_u = m6_u;
+      u6   = u6_s*(u6_u - u6_l) + u6_l;
+      m6 = u6;
+      jacob_u6 = 1.0;
 
-    V2     = myMC->terms[3];
-    A2     = myMC->terms[4];
-    VA     = myMC->terms[5];
-  }
-  else if(BSM == INTERFERENCE)
-  {
-  //////////////////////////////////////////////////////////
-  // BSM PROPAGATOR 
-    // long double prop = (1.0/(-2*(m6/mzprime/mzprime) - 1.0))/mzprime/mzprime;
-    u6_l = log(1.0/(2.0*m6_u + mzprime*mzprime));
-    u6_u = log(1.0/(2.0*m6_l + mzprime*mzprime));
-    u6   = u6_s*(u6_u - u6_l) + u6_l;
-    m6   = -mzprime*mzprime/2.0 + exp(-u6)/2.0;
+      V2     = myMC->terms[3];
+      A2     = myMC->terms[4];
+      VA     = myMC->terms[5];
+      break;
 
-    prop = -exp(u6);
-    jacob_u6 = exp(-u6)/2.0;
+    case (INTERFERENCE):
 
-    V2     = myMC->terms[3] * prop;
-    A2     = myMC->terms[4] * prop;
-    VA     = myMC->terms[5] * prop;
-  }
-  else if(BSM == BSMonly)
-  {    
-    u6_l = 1.0/(2.0*m6_u + mzprime*mzprime);
-    u6_u = 1.0/(2.0*m6_l + mzprime*mzprime);
-    u6   = u6_s*(u6_u - u6_l) + u6_l;
-    m6   = -mzprime*mzprime/2.0 + 1.0/2.0/u6;
+      //////////////////////////////////////////////////////////
+      // BSM PROPAGATOR 
+      // long double prop = (1.0/(-2*(m6/mzprime/mzprime) - 1.0))/mzprime/mzprime;
+      u6_l = log(1.0/(2.0*m6_u + mzprime*mzprime));
+      u6_u = log(1.0/(2.0*m6_l + mzprime*mzprime));
+      u6   = u6_s*(u6_u - u6_l) + u6_l;
+      m6   = -mzprime*mzprime/2.0 + exp(-u6)/2.0;
 
-    prop = -u6;
-    jacob_u6 = 1.0/(u6*u6)/2.0;
+      prop = -exp(u6);
+      jacob_u6 = exp(-u6)/2.0;
 
-    V2     = myMC->terms[3] * prop*prop;
-    A2     = myMC->terms[4] * prop*prop;
-    VA     = myMC->terms[5] * prop*prop;
-  }
-  else if( BSM == SMandBSM)
-  {
-    u6_l = m6_l;
-    u6_u = m6_u;
-    u6   = u6_s*(u6_u - u6_l) + u6_l;
-    m6 = u6;
-    jacob_u6 = 1.0;
+      V2     = myMC->terms[3] * prop;
+      A2     = myMC->terms[4] * prop;
+      VA     = myMC->terms[5] * prop;
+      break;
 
-    prop = 1.0/(2.0*m6 + mzprime*mzprime);
+    case (BSMonly):
 
-    V2     = (myMC->Vijk + myMC->gprimeV*myMC->gprimeV/2.0/sqrt(2.0)/Gf * myMC->CHARGE * prop)*(myMC->Vijk + myMC->gprimeV*myMC->gprimeV/2.0/sqrt(2.0)/Gf * myMC->CHARGE * prop) ;
-    A2     = (myMC->Aijk + myMC->gprimeA*myMC->gprimeA/2.0/sqrt(2.0)/Gf * myMC->CHARGE * prop)*(myMC->Aijk + myMC->gprimeA*myMC->gprimeA/2.0/sqrt(2.0)/Gf * myMC->CHARGE * prop) ;
-    VA     = (myMC->Aijk + myMC->gprimeA*myMC->gprimeA/2.0/sqrt(2.0)/Gf * myMC->CHARGE * prop)*(myMC->Vijk + myMC->gprimeV*myMC->gprimeV/2.0/sqrt(2.0)/Gf * myMC->CHARGE * prop);
+      u6_l = 1.0/(2.0*m6_u + mzprime*mzprime);
+      u6_u = 1.0/(2.0*m6_l + mzprime*mzprime);
+      u6   = u6_s*(u6_u - u6_l) + u6_l;
+      m6   = -mzprime*mzprime/2.0 + 1.0/2.0/u6;
+
+      prop = -u6;
+      jacob_u6 = 1.0/(u6*u6)/2.0;
+
+      V2     = myMC->terms[3] * prop*prop;
+      A2     = myMC->terms[4] * prop*prop;
+      VA     = myMC->terms[5] * prop*prop;
+      break;
+    
+    case (SMandBSM):
+     
+      u6_l = m6_l;
+      u6_u = m6_u;
+      u6   = u6_s*(u6_u - u6_l) + u6_l;
+      m6 = u6;
+      jacob_u6 = 1.0;
+
+      prop = 1.0/(2.0*m6 + mzprime*mzprime);
+
+      V2     = (myMC->Vijk + myMC->gprimeV*myMC->gprimeV/2.0/sqrt(2.0)/Gf * myMC->CHARGE * prop)*(myMC->Vijk + myMC->gprimeV*myMC->gprimeV/2.0/sqrt(2.0)/Gf * myMC->CHARGE * prop) ;
+      A2     = (myMC->Aijk + myMC->gprimeA*myMC->gprimeA/2.0/sqrt(2.0)/Gf * myMC->CHARGE * prop)*(myMC->Aijk + myMC->gprimeA*myMC->gprimeA/2.0/sqrt(2.0)/Gf * myMC->CHARGE * prop) ;
+      VA     = (myMC->Aijk + myMC->gprimeA*myMC->gprimeA/2.0/sqrt(2.0)/Gf * myMC->CHARGE * prop)*(myMC->Vijk + myMC->gprimeV*myMC->gprimeV/2.0/sqrt(2.0)/Gf * myMC->CHARGE * prop);
+      break;
+
+    default:
+      std::cout << "Could not determine what contributions (BSM) to include." << std::endl;
+      break;
   }
 
   long double C2 = 1.0 - m6 / E1 / E2;
@@ -208,37 +215,33 @@ std::vector<long double> CohFromIntToPhysical_Efixed(const cubareal xx[], void *
   // MATRIX ELEMENT ITSELF
   long double FormFactor = FF_WS(sqrt(x1), A);
 
-  // includes Z*Z for the coherent enhancement
+  // already includes Z*Z for the coherent enhancement
   long double dsigma = (8*(alphaQED*alphaQED)*(FormFactor*FormFactor)*(Gf*Gf)*(Diag22*((x1 + 2*x4)*(x1 + 2*x4))*(A2*(-2*(ml2*ml2)*Mn*(x2*x2*x2)*(-(Enu*Enu*Mn*x1) + Enu*x1*x2 + Mn*(x2*x2))*(-(ml1*ml1) + ml2*ml2 - x1 + 2*x2 - 2*x3 - 2*x5) - 2*Mn*(x2*x2*x2)*(-(Enu*Enu*Mn*x1) + Enu*x1*x2 + Mn*(x2*x2))*x3*(-(ml1*ml1) + ml2*ml2 - x1 + 2*x2 - 2*x3 - 2*x5) + 2*(ml2*ml2)*Mn*(x2*x2)*(-(Enu*Enu*Mn*x1) + Enu*x1*x2 + Mn*(x2*x2))*(-(ml1*ml1) + ml2*ml2 - x1 + 2*x2 - 2*x3 - 2*x5)*x5 - x1*x1*(x2*x2)*((-2*Enu*Mn + x2)*(-2*Enu*Mn + x2))*x5*(ml1*ml1 - ml2*ml2 + x1 - 2*x2 + 2*x3 + 2*x5) + 3*Mn*x1*(x2*x2)*(-(Enu*Enu*Mn*x1) + Enu*x1*x2 + Mn*(x2*x2))*x5*(ml1*ml1 - ml2*ml2 + x1 - 2*x2 + 2*x3 + 2*x5) + 2*(x1*x1)*x2*((-2*Enu*Mn + x2)*(-2*Enu*Mn + x2))*(x5*x5)*(ml1*ml1 - ml2*ml2 + x1 - 2*x2 + 2*x3 + 2*x5) - 4*Mn*x1*x2*(-(Enu*Enu*Mn*x1) + Enu*x1*x2 + Mn*(x2*x2))*(x5*x5)*(ml1*ml1 - ml2*ml2 + x1 - 2*x2 + 2*x3 + 2*x5) - x1*x1*((-2*Enu*Mn + x2)*(-2*Enu*Mn + x2))*(x5*x5*x5)*(ml1*ml1 - ml2*ml2 + x1 - 2*x2 + 2*x3 + 2*x5) - 2*Mn*x1*(Enu*Enu*Mn*x1 - Enu*x1*x2 - Mn*(x2*x2))*(x5*x5*x5)*(ml1*ml1 - ml2*ml2 + x1 - 2*x2 + 2*x3 + 2*x5) - 4*ml1*(ml2*ml2*ml2)*Mn*(x2*x2)*(-(Enu*Enu*Mn*x1) + Enu*x1*x2 + Mn*(x2*x2))*(x2 - x5 - x6) + 4*ml1*ml2*Mn*x1*(x2*x2)*(-(Enu*Enu*Mn*x1) + Enu*x1*x2 + Mn*(x2*x2))*(x2 - x5 - x6) + 4*ml1*ml2*Mn*(x2*x2)*(-(Enu*Enu*Mn*x1) + Enu*x1*x2 + Mn*(x2*x2))*x3*(x2 - x5 - x6) + 2*ml1*ml2*(x1*x1)*x2*((-2*Enu*Mn + x2)*(-2*Enu*Mn + x2))*x5*(x2 - x5 - x6) - 4*ml1*ml2*Mn*x1*x2*(-(Enu*Enu*Mn*x1) + Enu*x1*x2 + Mn*(x2*x2))*x5*(x2 - x5 - x6) - 2*ml1*ml2*(x1*x1)*((-2*Enu*Mn + x2)*(-2*Enu*Mn + x2))*(x5*x5)*(x2 - x5 - x6) - 4*ml1*ml2*Mn*x1*(Enu*Enu*Mn*x1 - Enu*x1*x2 - Mn*(x2*x2))*(x5*x5)*(x2 - x5 - x6) - 4*(ml2*ml2)*Mn*(x2*x2)*(-(Enu*Enu*Mn*x1) + Enu*x1*x2 + Mn*(x2*x2))*(-x1 + x2 - x3 - x4)*x6 - 4*Mn*(x2*x2)*(-(Enu*Enu*Mn*x1) + Enu*x1*x2 + Mn*(x2*x2))*x3*(-x1 + x2 - x3 - x4)*x6 - 2*(x1*x1)*x2*((-2*Enu*Mn + x2)*(-2*Enu*Mn + x2))*(x1 - x2 + x3 + x4)*x5*x6 + 4*Mn*x1*x2*(-(Enu*Enu*Mn*x1) + Enu*x1*x2 + Mn*(x2*x2))*(x1 - x2 + x3 + x4)*x5*x6 + 2*(x1*x1)*((-2*Enu*Mn + x2)*(-2*Enu*Mn + x2))*(x1 - x2 + x3 + x4)*(x5*x5)*x6 + 4*Mn*x1*(Enu*Enu*Mn*x1 - Enu*x1*x2 - Mn*(x2*x2))*(x1 - x2 + x3 + x4)*(x5*x5)*x6 + x1*x1*x1*((-2*Enu*Mn + x2)*(-2*Enu*Mn + x2))*x5*(x2 - x5 - x6)*x6 + 2*Mn*(x1*x1)*(Enu*Enu*Mn*x1 - Enu*x1*x2 - Mn*(x2*x2))*x5*(x2 - x5 - x6)*x6 + 2*(x1*x1)*((-2*Enu*Mn + x2)*(-2*Enu*Mn + x2))*x3*x5*(x2 - x5 - x6)*x6 + 4*Mn*x1*(Enu*Enu*Mn*x1 - Enu*x1*x2 - Mn*(x2*x2))*x3*x5*(x2 - x5 - x6)*x6 - 2*(ml2*ml2)*Mn*(x2*x2)*(-(Enu*Enu*Mn*x1) + Enu*x1*x2 + Mn*(x2*x2))*x6*(-(ml1*ml1) + ml2*ml2 + x1 - 2*x2 + 2*x4 + 2*x6) + Mn*x1*(x2*x2)*(-(Enu*Enu*Mn*x1) + Enu*x1*x2 + Mn*(x2*x2))*x6*(-(ml1*ml1) + ml2*ml2 + x1 - 2*x2 + 2*x4 + 2*x6) + x1*x1*x2*((-2*Enu*Mn + x2)*(-2*Enu*Mn + x2))*x5*x6*(-(ml1*ml1) + ml2*ml2 + x1 - 2*x2 + 2*x4 + 2*x6) - 2*Mn*x1*x2*(-(Enu*Enu*Mn*x1) + Enu*x1*x2 + Mn*(x2*x2))*x5*x6*(-(ml1*ml1) + ml2*ml2 + x1 - 2*x2 + 2*x4 + 2*x6) - x1*x1*((-2*Enu*Mn + x2)*(-2*Enu*Mn + x2))*(x5*x5)*x6*(-(ml1*ml1) + ml2*ml2 + x1 - 2*x2 + 2*x4 + 2*x6) - 2*Mn*x1*(Enu*Enu*Mn*x1 - Enu*x1*x2 - Mn*(x2*x2))*(x5*x5)*x6*(-(ml1*ml1) + ml2*ml2 + x1 - 2*x2 + 2*x4 + 2*x6)) + V2*(-2*(ml2*ml2)*Mn*(x2*x2*x2)*(-(Enu*Enu*Mn*x1) + Enu*x1*x2 + Mn*(x2*x2))*(-(ml1*ml1) + ml2*ml2 - x1 + 2*x2 - 2*x3 - 2*x5) - 2*Mn*(x2*x2*x2)*(-(Enu*Enu*Mn*x1) + Enu*x1*x2 + Mn*(x2*x2))*x3*(-(ml1*ml1) + ml2*ml2 - x1 + 2*x2 - 2*x3 - 2*x5) + 2*(ml2*ml2)*Mn*(x2*x2)*(-(Enu*Enu*Mn*x1) + Enu*x1*x2 + Mn*(x2*x2))*(-(ml1*ml1) + ml2*ml2 - x1 + 2*x2 - 2*x3 - 2*x5)*x5 - x1*x1*(x2*x2)*((-2*Enu*Mn + x2)*(-2*Enu*Mn + x2))*x5*(ml1*ml1 - ml2*ml2 + x1 - 2*x2 + 2*x3 + 2*x5) + 3*Mn*x1*(x2*x2)*(-(Enu*Enu*Mn*x1) + Enu*x1*x2 + Mn*(x2*x2))*x5*(ml1*ml1 - ml2*ml2 + x1 - 2*x2 + 2*x3 + 2*x5) + 2*(x1*x1)*x2*((-2*Enu*Mn + x2)*(-2*Enu*Mn + x2))*(x5*x5)*(ml1*ml1 - ml2*ml2 + x1 - 2*x2 + 2*x3 + 2*x5) - 4*Mn*x1*x2*(-(Enu*Enu*Mn*x1) + Enu*x1*x2 + Mn*(x2*x2))*(x5*x5)*(ml1*ml1 - ml2*ml2 + x1 - 2*x2 + 2*x3 + 2*x5) - x1*x1*((-2*Enu*Mn + x2)*(-2*Enu*Mn + x2))*(x5*x5*x5)*(ml1*ml1 - ml2*ml2 + x1 - 2*x2 + 2*x3 + 2*x5) - 2*Mn*x1*(Enu*Enu*Mn*x1 - Enu*x1*x2 - Mn*(x2*x2))*(x5*x5*x5)*(ml1*ml1 - ml2*ml2 + x1 - 2*x2 + 2*x3 + 2*x5) + 4*ml1*(ml2*ml2*ml2)*Mn*(x2*x2)*(-(Enu*Enu*Mn*x1) + Enu*x1*x2 + Mn*(x2*x2))*(x2 - x5 - x6) - 4*ml1*ml2*Mn*x1*(x2*x2)*(-(Enu*Enu*Mn*x1) + Enu*x1*x2 + Mn*(x2*x2))*(x2 - x5 - x6) - 4*ml1*ml2*Mn*(x2*x2)*(-(Enu*Enu*Mn*x1) + Enu*x1*x2 + Mn*(x2*x2))*x3*(x2 - x5 - x6) - 2*ml1*ml2*(x1*x1)*x2*((-2*Enu*Mn + x2)*(-2*Enu*Mn + x2))*x5*(x2 - x5 - x6) + 4*ml1*ml2*Mn*x1*x2*(-(Enu*Enu*Mn*x1) + Enu*x1*x2 + Mn*(x2*x2))*x5*(x2 - x5 - x6) + 2*ml1*ml2*(x1*x1)*((-2*Enu*Mn + x2)*(-2*Enu*Mn + x2))*(x5*x5)*(x2 - x5 - x6) + 4*ml1*ml2*Mn*x1*(Enu*Enu*Mn*x1 - Enu*x1*x2 - Mn*(x2*x2))*(x5*x5)*(x2 - x5 - x6) - 4*(ml2*ml2)*Mn*(x2*x2)*(-(Enu*Enu*Mn*x1) + Enu*x1*x2 + Mn*(x2*x2))*(-x1 + x2 - x3 - x4)*x6 - 4*Mn*(x2*x2)*(-(Enu*Enu*Mn*x1) + Enu*x1*x2 + Mn*(x2*x2))*x3*(-x1 + x2 - x3 - x4)*x6 - 2*(x1*x1)*x2*((-2*Enu*Mn + x2)*(-2*Enu*Mn + x2))*(x1 - x2 + x3 + x4)*x5*x6 + 4*Mn*x1*x2*(-(Enu*Enu*Mn*x1) + Enu*x1*x2 + Mn*(x2*x2))*(x1 - x2 + x3 + x4)*x5*x6 + 2*(x1*x1)*((-2*Enu*Mn + x2)*(-2*Enu*Mn + x2))*(x1 - x2 + x3 + x4)*(x5*x5)*x6 + 4*Mn*x1*(Enu*Enu*Mn*x1 - Enu*x1*x2 - Mn*(x2*x2))*(x1 - x2 + x3 + x4)*(x5*x5)*x6 + x1*x1*x1*((-2*Enu*Mn + x2)*(-2*Enu*Mn + x2))*x5*(x2 - x5 - x6)*x6 + 2*Mn*(x1*x1)*(Enu*Enu*Mn*x1 - Enu*x1*x2 - Mn*(x2*x2))*x5*(x2 - x5 - x6)*x6 + 2*(x1*x1)*((-2*Enu*Mn + x2)*(-2*Enu*Mn + x2))*x3*x5*(x2 - x5 - x6)*x6 + 4*Mn*x1*(Enu*Enu*Mn*x1 - Enu*x1*x2 - Mn*(x2*x2))*x3*x5*(x2 - x5 - x6)*x6 - 2*(ml2*ml2)*Mn*(x2*x2)*(-(Enu*Enu*Mn*x1) + Enu*x1*x2 + Mn*(x2*x2))*x6*(-(ml1*ml1) + ml2*ml2 + x1 - 2*x2 + 2*x4 + 2*x6) + Mn*x1*(x2*x2)*(-(Enu*Enu*Mn*x1) + Enu*x1*x2 + Mn*(x2*x2))*x6*(-(ml1*ml1) + ml2*ml2 + x1 - 2*x2 + 2*x4 + 2*x6) + x1*x1*x2*((-2*Enu*Mn + x2)*(-2*Enu*Mn + x2))*x5*x6*(-(ml1*ml1) + ml2*ml2 + x1 - 2*x2 + 2*x4 + 2*x6) - 2*Mn*x1*x2*(-(Enu*Enu*Mn*x1) + Enu*x1*x2 + Mn*(x2*x2))*x5*x6*(-(ml1*ml1) + ml2*ml2 + x1 - 2*x2 + 2*x4 + 2*x6) - x1*x1*((-2*Enu*Mn + x2)*(-2*Enu*Mn + x2))*(x5*x5)*x6*(-(ml1*ml1) + ml2*ml2 + x1 - 2*x2 + 2*x4 + 2*x6) - 2*Mn*x1*(Enu*Enu*Mn*x1 - Enu*x1*x2 - Mn*(x2*x2))*(x5*x5)*x6*(-(ml1*ml1) + ml2*ml2 + x1 - 2*x2 + 2*x4 + 2*x6)) + 2*VA*(-2*(ml2*ml2)*Mn*(x2*x2*x2)*(-(Enu*Enu*Mn*x1) + Enu*x1*x2 + Mn*(x2*x2))*(-(ml1*ml1) + ml2*ml2 - x1 + 2*x2 - 2*x3 - 2*x5) - 2*Mn*(x2*x2*x2)*(-(Enu*Enu*Mn*x1) + Enu*x1*x2 + Mn*(x2*x2))*x3*(-(ml1*ml1) + ml2*ml2 - x1 + 2*x2 - 2*x3 - 2*x5) + 2*(ml2*ml2)*Mn*(x2*x2)*(-(Enu*Enu*Mn*x1) + Enu*x1*x2 + Mn*(x2*x2))*(-(ml1*ml1) + ml2*ml2 - x1 + 2*x2 - 2*x3 - 2*x5)*x5 - x1*x1*(x2*x2)*((-2*Enu*Mn + x2)*(-2*Enu*Mn + x2))*x5*(ml1*ml1 - ml2*ml2 + x1 - 2*x2 + 2*x3 + 2*x5) + 3*Mn*x1*(x2*x2)*(-(Enu*Enu*Mn*x1) + Enu*x1*x2 + Mn*(x2*x2))*x5*(ml1*ml1 - ml2*ml2 + x1 - 2*x2 + 2*x3 + 2*x5) + 2*(x1*x1)*x2*((-2*Enu*Mn + x2)*(-2*Enu*Mn + x2))*(x5*x5)*(ml1*ml1 - ml2*ml2 + x1 - 2*x2 + 2*x3 + 2*x5) - 4*Mn*x1*x2*(-(Enu*Enu*Mn*x1) + Enu*x1*x2 + Mn*(x2*x2))*(x5*x5)*(ml1*ml1 - ml2*ml2 + x1 - 2*x2 + 2*x3 + 2*x5) - x1*x1*((-2*Enu*Mn + x2)*(-2*Enu*Mn + x2))*(x5*x5*x5)*(ml1*ml1 - ml2*ml2 + x1 - 2*x2 + 2*x3 + 2*x5) - 2*Mn*x1*(Enu*Enu*Mn*x1 - Enu*x1*x2 - Mn*(x2*x2))*(x5*x5*x5)*(ml1*ml1 - ml2*ml2 + x1 - 2*x2 + 2*x3 + 2*x5) + 4*(ml2*ml2)*Mn*(x2*x2)*(-(Enu*Enu*Mn*x1) + Enu*x1*x2 + Mn*(x2*x2))*(-x1 + x2 - x3 - x4)*x6 + 4*Mn*(x2*x2)*(-(Enu*Enu*Mn*x1) + Enu*x1*x2 + Mn*(x2*x2))*x3*(-x1 + x2 - x3 - x4)*x6 + 2*(x1*x1)*x2*((-2*Enu*Mn + x2)*(-2*Enu*Mn + x2))*(x1 - x2 + x3 + x4)*x5*x6 - 4*Mn*x1*x2*(-(Enu*Enu*Mn*x1) + Enu*x1*x2 + Mn*(x2*x2))*(x1 - x2 + x3 + x4)*x5*x6 - 2*(x1*x1)*((-2*Enu*Mn + x2)*(-2*Enu*Mn + x2))*(x1 - x2 + x3 + x4)*(x5*x5)*x6 - 4*Mn*x1*(Enu*Enu*Mn*x1 - Enu*x1*x2 - Mn*(x2*x2))*(x1 - x2 + x3 + x4)*(x5*x5)*x6 - x1*x1*x1*((-2*Enu*Mn + x2)*(-2*Enu*Mn + x2))*x5*(x2 - x5 - x6)*x6 - 2*Mn*(x1*x1)*(Enu*Enu*Mn*x1 - Enu*x1*x2 - Mn*(x2*x2))*x5*(x2 - x5 - x6)*x6 - 2*(x1*x1)*((-2*Enu*Mn + x2)*(-2*Enu*Mn + x2))*x3*x5*(x2 - x5 - x6)*x6 - 4*Mn*x1*(Enu*Enu*Mn*x1 - Enu*x1*x2 - Mn*(x2*x2))*x3*x5*(x2 - x5 - x6)*x6 + Mn*x1*(x2*x2)*(Enu*Enu*Mn*x1 - Enu*x1*x2 - Mn*(x2*x2))*x6*(-(ml1*ml1) + ml2*ml2 + x1 - 2*x2 + 2*x4 + 2*x6) + 2*(ml2*ml2)*Mn*(x2*x2)*(-(Enu*Enu*Mn*x1) + Enu*x1*x2 + Mn*(x2*x2))*x6*(-(ml1*ml1) + ml2*ml2 + x1 - 2*x2 + 2*x4 + 2*x6) - x1*x1*x2*((-2*Enu*Mn + x2)*(-2*Enu*Mn + x2))*x5*x6*(-(ml1*ml1) + ml2*ml2 + x1 - 2*x2 + 2*x4 + 2*x6) + 2*Mn*x1*x2*(-(Enu*Enu*Mn*x1) + Enu*x1*x2 + Mn*(x2*x2))*x5*x6*(-(ml1*ml1) + ml2*ml2 + x1 - 2*x2 + 2*x4 + 2*x6) + x1*x1*((-2*Enu*Mn + x2)*(-2*Enu*Mn + x2))*(x5*x5)*x6*(-(ml1*ml1) + ml2*ml2 + x1 - 2*x2 + 2*x4 + 2*x6) + 2*Mn*x1*(Enu*Enu*Mn*x1 - Enu*x1*x2 - Mn*(x2*x2))*(x5*x5)*x6*(-(ml1*ml1) + ml2*ml2 + x1 - 2*x2 + 2*x4 + 2*x6))) + Diag11*((x1 + 2*x3)*(x1 + 2*x3))*(A2*(-4*(ml1*ml1)*Mn*(x2*x2)*(-(Enu*Enu*Mn*x1) + Enu*x1*x2 + Mn*(x2*x2))*(-x1 + x2 - x3 - x4)*x5 - 4*Mn*(x2*x2)*(-(Enu*Enu*Mn*x1) + Enu*x1*x2 + Mn*(x2*x2))*(-x1 + x2 - x3 - x4)*x4*x5 - 2*(ml1*ml1)*Mn*(x2*x2)*(-(Enu*Enu*Mn*x1) + Enu*x1*x2 + Mn*(x2*x2))*x5*(ml1*ml1 - ml2*ml2 + x1 - 2*x2 + 2*x3 + 2*x5) + Mn*x1*(x2*x2)*(-(Enu*Enu*Mn*x1) + Enu*x1*x2 + Mn*(x2*x2))*x5*(ml1*ml1 - ml2*ml2 + x1 - 2*x2 + 2*x3 + 2*x5) - 2*(ml1*ml1)*Mn*(x2*x2*x2)*(-(Enu*Enu*Mn*x1) + Enu*x1*x2 + Mn*(x2*x2))*(ml1*ml1 - ml2*ml2 - x1 + 2*x2 - 2*x4 - 2*x6) - 2*Mn*(x2*x2*x2)*(-(Enu*Enu*Mn*x1) + Enu*x1*x2 + Mn*(x2*x2))*x4*(ml1*ml1 - ml2*ml2 - x1 + 2*x2 - 2*x4 - 2*x6) - 4*(ml1*ml1*ml1)*ml2*Mn*(x2*x2)*(-(Enu*Enu*Mn*x1) + Enu*x1*x2 + Mn*(x2*x2))*(x2 - x5 - x6) + 4*ml1*ml2*Mn*x1*(x2*x2)*(-(Enu*Enu*Mn*x1) + Enu*x1*x2 + Mn*(x2*x2))*(x2 - x5 - x6) + 4*ml1*ml2*Mn*(x2*x2)*(-(Enu*Enu*Mn*x1) + Enu*x1*x2 + Mn*(x2*x2))*x4*(x2 - x5 - x6) - 2*(x1*x1)*x2*((-2*Enu*Mn + x2)*(-2*Enu*Mn + x2))*(x1 - x2 + x3 + x4)*x5*x6 + 4*Mn*x1*x2*(-(Enu*Enu*Mn*x1) + Enu*x1*x2 + Mn*(x2*x2))*(x1 - x2 + x3 + x4)*x5*x6 + x1*x1*x2*((-2*Enu*Mn + x2)*(-2*Enu*Mn + x2))*x5*(ml1*ml1 - ml2*ml2 + x1 - 2*x2 + 2*x3 + 2*x5)*x6 - 2*Mn*x1*x2*(-(Enu*Enu*Mn*x1) + Enu*x1*x2 + Mn*(x2*x2))*x5*(ml1*ml1 - ml2*ml2 + x1 - 2*x2 + 2*x3 + 2*x5)*x6 + 2*(ml1*ml1)*Mn*(x2*x2)*(-(Enu*Enu*Mn*x1) + Enu*x1*x2 + Mn*(x2*x2))*(ml1*ml1 - ml2*ml2 - x1 + 2*x2 - 2*x4 - 2*x6)*x6 + 2*ml1*ml2*(x1*x1)*x2*((-2*Enu*Mn + x2)*(-2*Enu*Mn + x2))*(x2 - x5 - x6)*x6 - 4*ml1*ml2*Mn*x1*x2*(-(Enu*Enu*Mn*x1) + Enu*x1*x2 + Mn*(x2*x2))*(x2 - x5 - x6)*x6 + x1*x1*x1*((-2*Enu*Mn + x2)*(-2*Enu*Mn + x2))*x5*(x2 - x5 - x6)*x6 + 2*Mn*(x1*x1)*(Enu*Enu*Mn*x1 - Enu*x1*x2 - Mn*(x2*x2))*x5*(x2 - x5 - x6)*x6 + 2*(x1*x1)*((-2*Enu*Mn + x2)*(-2*Enu*Mn + x2))*x4*x5*(x2 - x5 - x6)*x6 + 4*Mn*x1*(Enu*Enu*Mn*x1 - Enu*x1*x2 - Mn*(x2*x2))*x4*x5*(x2 - x5 - x6)*x6 + 2*(x1*x1)*((-2*Enu*Mn + x2)*(-2*Enu*Mn + x2))*(x1 - x2 + x3 + x4)*x5*(x6*x6) + 4*Mn*x1*(Enu*Enu*Mn*x1 - Enu*x1*x2 - Mn*(x2*x2))*(x1 - x2 + x3 + x4)*x5*(x6*x6) - x1*x1*((-2*Enu*Mn + x2)*(-2*Enu*Mn + x2))*x5*(ml1*ml1 - ml2*ml2 + x1 - 2*x2 + 2*x3 + 2*x5)*(x6*x6) - 2*Mn*x1*(Enu*Enu*Mn*x1 - Enu*x1*x2 - Mn*(x2*x2))*x5*(ml1*ml1 - ml2*ml2 + x1 - 2*x2 + 2*x3 + 2*x5)*(x6*x6) - 2*ml1*ml2*(x1*x1)*((-2*Enu*Mn + x2)*(-2*Enu*Mn + x2))*(x2 - x5 - x6)*(x6*x6) - 4*ml1*ml2*Mn*x1*(Enu*Enu*Mn*x1 - Enu*x1*x2 - Mn*(x2*x2))*(x2 - x5 - x6)*(x6*x6) - x1*x1*(x2*x2)*((-2*Enu*Mn + x2)*(-2*Enu*Mn + x2))*x6*(-(ml1*ml1) + ml2*ml2 + x1 - 2*x2 + 2*x4 + 2*x6) + 3*Mn*x1*(x2*x2)*(-(Enu*Enu*Mn*x1) + Enu*x1*x2 + Mn*(x2*x2))*x6*(-(ml1*ml1) + ml2*ml2 + x1 - 2*x2 + 2*x4 + 2*x6) + 2*(x1*x1)*x2*((-2*Enu*Mn + x2)*(-2*Enu*Mn + x2))*(x6*x6)*(-(ml1*ml1) + ml2*ml2 + x1 - 2*x2 + 2*x4 + 2*x6) - 4*Mn*x1*x2*(-(Enu*Enu*Mn*x1) + Enu*x1*x2 + Mn*(x2*x2))*(x6*x6)*(-(ml1*ml1) + ml2*ml2 + x1 - 2*x2 + 2*x4 + 2*x6) - x1*x1*((-2*Enu*Mn + x2)*(-2*Enu*Mn + x2))*(x6*x6*x6)*(-(ml1*ml1) + ml2*ml2 + x1 - 2*x2 + 2*x4 + 2*x6) - 2*Mn*x1*(Enu*Enu*Mn*x1 - Enu*x1*x2 - Mn*(x2*x2))*(x6*x6*x6)*(-(ml1*ml1) + ml2*ml2 + x1 - 2*x2 + 2*x4 + 2*x6)) + V2*(-4*(ml1*ml1)*Mn*(x2*x2)*(-(Enu*Enu*Mn*x1) + Enu*x1*x2 + Mn*(x2*x2))*(-x1 + x2 - x3 - x4)*x5 - 4*Mn*(x2*x2)*(-(Enu*Enu*Mn*x1) + Enu*x1*x2 + Mn*(x2*x2))*(-x1 + x2 - x3 - x4)*x4*x5 - 2*(ml1*ml1)*Mn*(x2*x2)*(-(Enu*Enu*Mn*x1) + Enu*x1*x2 + Mn*(x2*x2))*x5*(ml1*ml1 - ml2*ml2 + x1 - 2*x2 + 2*x3 + 2*x5) + Mn*x1*(x2*x2)*(-(Enu*Enu*Mn*x1) + Enu*x1*x2 + Mn*(x2*x2))*x5*(ml1*ml1 - ml2*ml2 + x1 - 2*x2 + 2*x3 + 2*x5) - 2*(ml1*ml1)*Mn*(x2*x2*x2)*(-(Enu*Enu*Mn*x1) + Enu*x1*x2 + Mn*(x2*x2))*(ml1*ml1 - ml2*ml2 - x1 + 2*x2 - 2*x4 - 2*x6) - 2*Mn*(x2*x2*x2)*(-(Enu*Enu*Mn*x1) + Enu*x1*x2 + Mn*(x2*x2))*x4*(ml1*ml1 - ml2*ml2 - x1 + 2*x2 - 2*x4 - 2*x6) + 4*(ml1*ml1*ml1)*ml2*Mn*(x2*x2)*(-(Enu*Enu*Mn*x1) + Enu*x1*x2 + Mn*(x2*x2))*(x2 - x5 - x6) - 4*ml1*ml2*Mn*x1*(x2*x2)*(-(Enu*Enu*Mn*x1) + Enu*x1*x2 + Mn*(x2*x2))*(x2 - x5 - x6) - 4*ml1*ml2*Mn*(x2*x2)*(-(Enu*Enu*Mn*x1) + Enu*x1*x2 + Mn*(x2*x2))*x4*(x2 - x5 - x6) - 2*(x1*x1)*x2*((-2*Enu*Mn + x2)*(-2*Enu*Mn + x2))*(x1 - x2 + x3 + x4)*x5*x6 + 4*Mn*x1*x2*(-(Enu*Enu*Mn*x1) + Enu*x1*x2 + Mn*(x2*x2))*(x1 - x2 + x3 + x4)*x5*x6 + x1*x1*x2*((-2*Enu*Mn + x2)*(-2*Enu*Mn + x2))*x5*(ml1*ml1 - ml2*ml2 + x1 - 2*x2 + 2*x3 + 2*x5)*x6 - 2*Mn*x1*x2*(-(Enu*Enu*Mn*x1) + Enu*x1*x2 + Mn*(x2*x2))*x5*(ml1*ml1 - ml2*ml2 + x1 - 2*x2 + 2*x3 + 2*x5)*x6 + 2*(ml1*ml1)*Mn*(x2*x2)*(-(Enu*Enu*Mn*x1) + Enu*x1*x2 + Mn*(x2*x2))*(ml1*ml1 - ml2*ml2 - x1 + 2*x2 - 2*x4 - 2*x6)*x6 - 2*ml1*ml2*(x1*x1)*x2*((-2*Enu*Mn + x2)*(-2*Enu*Mn + x2))*(x2 - x5 - x6)*x6 + 4*ml1*ml2*Mn*x1*x2*(-(Enu*Enu*Mn*x1) + Enu*x1*x2 + Mn*(x2*x2))*(x2 - x5 - x6)*x6 + x1*x1*x1*((-2*Enu*Mn + x2)*(-2*Enu*Mn + x2))*x5*(x2 - x5 - x6)*x6 + 2*Mn*(x1*x1)*(Enu*Enu*Mn*x1 - Enu*x1*x2 - Mn*(x2*x2))*x5*(x2 - x5 - x6)*x6 + 2*(x1*x1)*((-2*Enu*Mn + x2)*(-2*Enu*Mn + x2))*x4*x5*(x2 - x5 - x6)*x6 + 4*Mn*x1*(Enu*Enu*Mn*x1 - Enu*x1*x2 - Mn*(x2*x2))*x4*x5*(x2 - x5 - x6)*x6 + 2*(x1*x1)*((-2*Enu*Mn + x2)*(-2*Enu*Mn + x2))*(x1 - x2 + x3 + x4)*x5*(x6*x6) + 4*Mn*x1*(Enu*Enu*Mn*x1 - Enu*x1*x2 - Mn*(x2*x2))*(x1 - x2 + x3 + x4)*x5*(x6*x6) - x1*x1*((-2*Enu*Mn + x2)*(-2*Enu*Mn + x2))*x5*(ml1*ml1 - ml2*ml2 + x1 - 2*x2 + 2*x3 + 2*x5)*(x6*x6) - 2*Mn*x1*(Enu*Enu*Mn*x1 - Enu*x1*x2 - Mn*(x2*x2))*x5*(ml1*ml1 - ml2*ml2 + x1 - 2*x2 + 2*x3 + 2*x5)*(x6*x6) + 2*ml1*ml2*(x1*x1)*((-2*Enu*Mn + x2)*(-2*Enu*Mn + x2))*(x2 - x5 - x6)*(x6*x6) + 4*ml1*ml2*Mn*x1*(Enu*Enu*Mn*x1 - Enu*x1*x2 - Mn*(x2*x2))*(x2 - x5 - x6)*(x6*x6) - x1*x1*(x2*x2)*((-2*Enu*Mn + x2)*(-2*Enu*Mn + x2))*x6*(-(ml1*ml1) + ml2*ml2 + x1 - 2*x2 + 2*x4 + 2*x6) + 3*Mn*x1*(x2*x2)*(-(Enu*Enu*Mn*x1) + Enu*x1*x2 + Mn*(x2*x2))*x6*(-(ml1*ml1) + ml2*ml2 + x1 - 2*x2 + 2*x4 + 2*x6) + 2*(x1*x1)*x2*((-2*Enu*Mn + x2)*(-2*Enu*Mn + x2))*(x6*x6)*(-(ml1*ml1) + ml2*ml2 + x1 - 2*x2 + 2*x4 + 2*x6) - 4*Mn*x1*x2*(-(Enu*Enu*Mn*x1) + Enu*x1*x2 + Mn*(x2*x2))*(x6*x6)*(-(ml1*ml1) + ml2*ml2 + x1 - 2*x2 + 2*x4 + 2*x6) - x1*x1*((-2*Enu*Mn + x2)*(-2*Enu*Mn + x2))*(x6*x6*x6)*(-(ml1*ml1) + ml2*ml2 + x1 - 2*x2 + 2*x4 + 2*x6) - 2*Mn*x1*(Enu*Enu*Mn*x1 - Enu*x1*x2 - Mn*(x2*x2))*(x6*x6*x6)*(-(ml1*ml1) + ml2*ml2 + x1 - 2*x2 + 2*x4 + 2*x6)) + 2*VA*(-4*(ml1*ml1)*Mn*(x2*x2)*(-(Enu*Enu*Mn*x1) + Enu*x1*x2 + Mn*(x2*x2))*(-x1 + x2 - x3 - x4)*x5 - 4*Mn*(x2*x2)*(-(Enu*Enu*Mn*x1) + Enu*x1*x2 + Mn*(x2*x2))*(-x1 + x2 - x3 - x4)*x4*x5 - 2*(ml1*ml1)*Mn*(x2*x2)*(-(Enu*Enu*Mn*x1) + Enu*x1*x2 + Mn*(x2*x2))*x5*(ml1*ml1 - ml2*ml2 + x1 - 2*x2 + 2*x3 + 2*x5) + Mn*x1*(x2*x2)*(-(Enu*Enu*Mn*x1) + Enu*x1*x2 + Mn*(x2*x2))*x5*(ml1*ml1 - ml2*ml2 + x1 - 2*x2 + 2*x3 + 2*x5) + 2*(ml1*ml1)*Mn*(x2*x2*x2)*(-(Enu*Enu*Mn*x1) + Enu*x1*x2 + Mn*(x2*x2))*(ml1*ml1 - ml2*ml2 - x1 + 2*x2 - 2*x4 - 2*x6) + 2*Mn*(x2*x2*x2)*(-(Enu*Enu*Mn*x1) + Enu*x1*x2 + Mn*(x2*x2))*x4*(ml1*ml1 - ml2*ml2 - x1 + 2*x2 - 2*x4 - 2*x6) - 2*(x1*x1)*x2*((-2*Enu*Mn + x2)*(-2*Enu*Mn + x2))*(x1 - x2 + x3 + x4)*x5*x6 + 4*Mn*x1*x2*(-(Enu*Enu*Mn*x1) + Enu*x1*x2 + Mn*(x2*x2))*(x1 - x2 + x3 + x4)*x5*x6 + x1*x1*x2*((-2*Enu*Mn + x2)*(-2*Enu*Mn + x2))*x5*(ml1*ml1 - ml2*ml2 + x1 - 2*x2 + 2*x3 + 2*x5)*x6 - 2*Mn*x1*x2*(-(Enu*Enu*Mn*x1) + Enu*x1*x2 + Mn*(x2*x2))*x5*(ml1*ml1 - ml2*ml2 + x1 - 2*x2 + 2*x3 + 2*x5)*x6 - 2*(ml1*ml1)*Mn*(x2*x2)*(-(Enu*Enu*Mn*x1) + Enu*x1*x2 + Mn*(x2*x2))*(ml1*ml1 - ml2*ml2 - x1 + 2*x2 - 2*x4 - 2*x6)*x6 + x1*x1*x1*((-2*Enu*Mn + x2)*(-2*Enu*Mn + x2))*x5*(x2 - x5 - x6)*x6 + 2*Mn*(x1*x1)*(Enu*Enu*Mn*x1 - Enu*x1*x2 - Mn*(x2*x2))*x5*(x2 - x5 - x6)*x6 + 2*(x1*x1)*((-2*Enu*Mn + x2)*(-2*Enu*Mn + x2))*x4*x5*(x2 - x5 - x6)*x6 + 4*Mn*x1*(Enu*Enu*Mn*x1 - Enu*x1*x2 - Mn*(x2*x2))*x4*x5*(x2 - x5 - x6)*x6 + 2*(x1*x1)*((-2*Enu*Mn + x2)*(-2*Enu*Mn + x2))*(x1 - x2 + x3 + x4)*x5*(x6*x6) + 4*Mn*x1*(Enu*Enu*Mn*x1 - Enu*x1*x2 - Mn*(x2*x2))*(x1 - x2 + x3 + x4)*x5*(x6*x6) - x1*x1*((-2*Enu*Mn + x2)*(-2*Enu*Mn + x2))*x5*(ml1*ml1 - ml2*ml2 + x1 - 2*x2 + 2*x3 + 2*x5)*(x6*x6) - 2*Mn*x1*(Enu*Enu*Mn*x1 - Enu*x1*x2 - Mn*(x2*x2))*x5*(ml1*ml1 - ml2*ml2 + x1 - 2*x2 + 2*x3 + 2*x5)*(x6*x6) + x1*x1*(x2*x2)*((-2*Enu*Mn + x2)*(-2*Enu*Mn + x2))*x6*(-(ml1*ml1) + ml2*ml2 + x1 - 2*x2 + 2*x4 + 2*x6) - 3*Mn*x1*(x2*x2)*(-(Enu*Enu*Mn*x1) + Enu*x1*x2 + Mn*(x2*x2))*x6*(-(ml1*ml1) + ml2*ml2 + x1 - 2*x2 + 2*x4 + 2*x6) - 2*(x1*x1)*x2*((-2*Enu*Mn + x2)*(-2*Enu*Mn + x2))*(x6*x6)*(-(ml1*ml1) + ml2*ml2 + x1 - 2*x2 + 2*x4 + 2*x6) + 4*Mn*x1*x2*(-(Enu*Enu*Mn*x1) + Enu*x1*x2 + Mn*(x2*x2))*(x6*x6)*(-(ml1*ml1) + ml2*ml2 + x1 - 2*x2 + 2*x4 + 2*x6) + x1*x1*((-2*Enu*Mn + x2)*(-2*Enu*Mn + x2))*(x6*x6*x6)*(-(ml1*ml1) + ml2*ml2 + x1 - 2*x2 + 2*x4 + 2*x6) + 2*Mn*x1*(Enu*Enu*Mn*x1 - Enu*x1*x2 - Mn*(x2*x2))*(x6*x6*x6)*(-(ml1*ml1) + ml2*ml2 + x1 - 2*x2 + 2*x4 + 2*x6))) + Diag12*(x1 + 2*x3)*(x1 + 2*x4)*(2*(Enu*Enu)*(Mn*Mn)*x1*(-2*V2*x1*(x2*x2*x2*x2) + 4*V2*(x2*x2*x2*x2*x2) + V2*x1*(x2*x2*x2)*x3 + 2*VA*x1*(x2*x2*x2)*x3 - 6*V2*(x2*x2*x2*x2)*x3 - 4*VA*(x2*x2*x2*x2)*x3 + 2*V2*(x2*x2*x2)*(x3*x3) + 4*VA*(x2*x2*x2)*(x3*x3) + V2*x1*(x2*x2*x2)*x4 - 2*VA*x1*(x2*x2*x2)*x4 - 6*V2*(x2*x2*x2*x2)*x4 + 4*VA*(x2*x2*x2*x2)*x4 + 4*V2*(x2*x2*x2)*x3*x4 + 2*V2*(x2*x2*x2)*(x4*x4) - 4*VA*(x2*x2*x2)*(x4*x4) + 4*V2*(x1*x1)*(x2*x2)*x5 + 8*VA*(x1*x1)*(x2*x2)*x5 - 6*V2*x1*(x2*x2*x2)*x5 - 12*VA*x1*(x2*x2*x2)*x5 - 8*V2*(x2*x2*x2*x2)*x5 - 8*VA*(x2*x2*x2*x2)*x5 + 8*V2*x1*(x2*x2)*x3*x5 + 16*VA*x1*(x2*x2)*x3*x5 + 6*V2*(x2*x2*x2)*x3*x5 + 12*VA*(x2*x2*x2)*x3*x5 + 8*V2*x1*(x2*x2)*x4*x5 + 16*VA*x1*(x2*x2)*x4*x5 + 6*V2*(x2*x2*x2)*x4*x5 - 4*VA*(x2*x2*x2)*x4*x5 + 2*V2*(x2*x2)*x3*x4*x5 + 4*VA*(x2*x2)*x3*x4*x5 - 2*V2*(x2*x2)*(x4*x4)*x5 + 4*VA*(x2*x2)*(x4*x4)*x5 - 3*V2*(x1*x1)*x2*(x5*x5) - 6*VA*(x1*x1)*x2*(x5*x5) + 12*V2*x1*(x2*x2)*(x5*x5) + 24*VA*x1*(x2*x2)*(x5*x5) + 8*V2*(x2*x2*x2)*(x5*x5) + 16*VA*(x2*x2*x2)*(x5*x5) - 6*V2*x1*x2*x3*(x5*x5) - 12*VA*x1*x2*x3*(x5*x5) - 4*V2*(x2*x2)*x3*(x5*x5) - 8*VA*(x2*x2)*x3*(x5*x5) - 12*V2*x1*x2*x4*(x5*x5) - 24*VA*x1*x2*x4*(x5*x5) - 6*V2*x1*x2*(x5*x5*x5) - 12*VA*x1*x2*(x5*x5*x5) - 4*V2*(x2*x2)*(x5*x5*x5) - 8*VA*(x2*x2)*(x5*x5*x5) + 6*V2*x1*x4*(x5*x5*x5) + 12*VA*x1*x4*(x5*x5*x5) + 4*V2*(x1*x1)*(x2*x2)*x6 - 8*VA*(x1*x1)*(x2*x2)*x6 - 6*V2*x1*(x2*x2*x2)*x6 + 12*VA*x1*(x2*x2*x2)*x6 - 8*V2*(x2*x2*x2*x2)*x6 + 8*VA*(x2*x2*x2*x2)*x6 + 8*V2*x1*(x2*x2)*x3*x6 - 16*VA*x1*(x2*x2)*x3*x6 + 6*V2*(x2*x2*x2)*x3*x6 + 4*VA*(x2*x2*x2)*x3*x6 - 2*V2*(x2*x2)*(x3*x3)*x6 - 4*VA*(x2*x2)*(x3*x3)*x6 + 8*V2*x1*(x2*x2)*x4*x6 - 16*VA*x1*(x2*x2)*x4*x6 + 6*V2*(x2*x2*x2)*x4*x6 - 12*VA*(x2*x2*x2)*x4*x6 + 2*V2*(x2*x2)*x3*x4*x6 - 4*VA*(x2*x2)*x3*x4*x6 + 16*V2*x1*(x2*x2)*x5*x6 + 8*V2*(x2*x2*x2)*x5*x6 - 6*V2*x1*x2*x3*x5*x6 - 12*VA*x1*x2*x3*x5*x6 - 4*V2*(x2*x2)*x3*x5*x6 - 8*VA*(x2*x2)*x3*x5*x6 - 6*V2*x1*x2*x4*x5*x6 + 12*VA*x1*x2*x4*x5*x6 - 4*V2*(x2*x2)*x4*x5*x6 + 8*VA*(x2*x2)*x4*x5*x6 - 18*V2*x1*x2*(x5*x5)*x6 - 36*VA*x1*x2*(x5*x5)*x6 - 4*V2*(x2*x2)*(x5*x5)*x6 - 8*VA*(x2*x2)*(x5*x5)*x6 + 6*V2*x1*x3*(x5*x5)*x6 + 12*VA*x1*x3*(x5*x5)*x6 + 12*V2*x1*(x5*x5*x5)*x6 + 24*VA*x1*(x5*x5*x5)*x6 - 3*V2*(x1*x1)*x2*(x6*x6) + 6*VA*(x1*x1)*x2*(x6*x6) + 12*V2*x1*(x2*x2)*(x6*x6) - 24*VA*x1*(x2*x2)*(x6*x6) + 8*V2*(x2*x2*x2)*(x6*x6) - 16*VA*(x2*x2*x2)*(x6*x6) - 12*V2*x1*x2*x3*(x6*x6) + 24*VA*x1*x2*x3*(x6*x6) - 6*V2*x1*x2*x4*(x6*x6) + 12*VA*x1*x2*x4*(x6*x6) - 4*V2*(x2*x2)*x4*(x6*x6) + 8*VA*(x2*x2)*x4*(x6*x6) - 18*V2*x1*x2*x5*(x6*x6) + 36*VA*x1*x2*x5*(x6*x6) - 4*V2*(x2*x2)*x5*(x6*x6) + 8*VA*(x2*x2)*x5*(x6*x6) + 6*V2*x1*x4*x5*(x6*x6) - 12*VA*x1*x4*x5*(x6*x6) - 6*V2*x1*x2*(x6*x6*x6) + 12*VA*x1*x2*(x6*x6*x6) - 4*V2*(x2*x2)*(x6*x6*x6) + 8*VA*(x2*x2)*(x6*x6*x6) + 6*V2*x1*x3*(x6*x6*x6) - 12*VA*x1*x3*(x6*x6*x6) + 12*V2*x1*x5*(x6*x6*x6) - 24*VA*x1*x5*(x6*x6*x6) + 2*(ml1*ml1*ml1)*ml2*V2*(x2*x2)*(-x2 + x5 + x6) + ml2*ml2*ml2*ml2*(x2*x2)*(2*VA*(x2 - x5 - x6) + V2*(-x5 + x6)) + ml1*ml1*ml1*ml1*(x2*x2)*(V2*(x5 - x6) + 2*VA*(-x2 + x5 + x6)) - 2*ml1*ml2*V2*(ml2*ml2*(x2*x2)*(x2 - x5 - x6) + x1*(x2*x2*x2 - 6*(x2*x2)*(x5 + x6) - 6*x5*x6*(x5 + x6) + 3*x2*(x5*x5 + 4*x5*x6 + x6*x6)) + x2*x2*(4*(x2*x2) + (x5 + x6)*(x3 + x4 + 2*(x5 + x6)) - x2*(3*x3 + 3*x4 + 4*(x5 + x6)))) - ml2*ml2*(V2*(-2*(x2*x2*x2*x2) + x2*x2*x2*(x3 + x4 + 4*x5) + x2*x2*(-2*x5*(x3 - x4 + 2*x5) + x1*(3*x5 - x6)) + 6*x1*x5*(x5 - x6)*x6 + 3*x1*x2*(-(x5*x5) + x6*x6)) + 2*VA*(x2*x2*(-2*(x2*x2) - 2*(x3 + 2*x5)*(x5 + x6) + x2*(3*x3 + x4 + 6*x5 + 2*x6)) + x1*(x2*x2*x2 + 3*(x2*x2)*(x5 + x6) + 6*x5*x6*(x5 + x6) - 3*x2*(x5*x5 + 4*x5*x6 + x6*x6)))) + ml1*ml1*(V2*(2*(x2*x2*x2*x2) + 6*x1*x5*(x5 - x6)*x6 - x2*x2*x2*(x3 + x4 + 4*x6) + 3*x1*x2*(-(x5*x5) + x6*x6) + x2*x2*(x1*(x5 - 3*x6) + 2*x6*(-x3 + x4 + 2*x6))) + 2*VA*(x2*x2*(-2*(x2*x2) - 2*(x5 + x6)*(x4 + 2*x6) + x2*(x3 + 3*x4 + 2*x5 + 6*x6)) + x1*(x2*x2*x2 + 3*(x2*x2)*(x5 + x6) + 6*x5*x6*(x5 + x6) - 3*x2*(x5*x5 + 4*x5*x6 + x6*x6))))) - 2*Enu*Mn*x1*x2*(-2*V2*x1*(x2*x2*x2*x2) + 4*V2*(x2*x2*x2*x2*x2) + V2*x1*(x2*x2*x2)*x3 + 2*VA*x1*(x2*x2*x2)*x3 - 6*V2*(x2*x2*x2*x2)*x3 - 4*VA*(x2*x2*x2*x2)*x3 + 2*V2*(x2*x2*x2)*(x3*x3) + 4*VA*(x2*x2*x2)*(x3*x3) + V2*x1*(x2*x2*x2)*x4 - 2*VA*x1*(x2*x2*x2)*x4 - 6*V2*(x2*x2*x2*x2)*x4 + 4*VA*(x2*x2*x2*x2)*x4 + 4*V2*(x2*x2*x2)*x3*x4 + 2*V2*(x2*x2*x2)*(x4*x4) - 4*VA*(x2*x2*x2)*(x4*x4) + 4*V2*(x1*x1)*(x2*x2)*x5 + 8*VA*(x1*x1)*(x2*x2)*x5 - 6*V2*x1*(x2*x2*x2)*x5 - 12*VA*x1*(x2*x2*x2)*x5 - 8*V2*(x2*x2*x2*x2)*x5 - 8*VA*(x2*x2*x2*x2)*x5 + 8*V2*x1*(x2*x2)*x3*x5 + 16*VA*x1*(x2*x2)*x3*x5 + 6*V2*(x2*x2*x2)*x3*x5 + 12*VA*(x2*x2*x2)*x3*x5 + 8*V2*x1*(x2*x2)*x4*x5 + 16*VA*x1*(x2*x2)*x4*x5 + 6*V2*(x2*x2*x2)*x4*x5 - 4*VA*(x2*x2*x2)*x4*x5 + 2*V2*(x2*x2)*x3*x4*x5 + 4*VA*(x2*x2)*x3*x4*x5 - 2*V2*(x2*x2)*(x4*x4)*x5 + 4*VA*(x2*x2)*(x4*x4)*x5 - 3*V2*(x1*x1)*x2*(x5*x5) - 6*VA*(x1*x1)*x2*(x5*x5) + 12*V2*x1*(x2*x2)*(x5*x5) + 24*VA*x1*(x2*x2)*(x5*x5) + 8*V2*(x2*x2*x2)*(x5*x5) + 16*VA*(x2*x2*x2)*(x5*x5) - 6*V2*x1*x2*x3*(x5*x5) - 12*VA*x1*x2*x3*(x5*x5) - 4*V2*(x2*x2)*x3*(x5*x5) - 8*VA*(x2*x2)*x3*(x5*x5) - 12*V2*x1*x2*x4*(x5*x5) - 24*VA*x1*x2*x4*(x5*x5) - 6*V2*x1*x2*(x5*x5*x5) - 12*VA*x1*x2*(x5*x5*x5) - 4*V2*(x2*x2)*(x5*x5*x5) - 8*VA*(x2*x2)*(x5*x5*x5) + 6*V2*x1*x4*(x5*x5*x5) + 12*VA*x1*x4*(x5*x5*x5) + 4*V2*(x1*x1)*(x2*x2)*x6 - 8*VA*(x1*x1)*(x2*x2)*x6 - 6*V2*x1*(x2*x2*x2)*x6 + 12*VA*x1*(x2*x2*x2)*x6 - 8*V2*(x2*x2*x2*x2)*x6 + 8*VA*(x2*x2*x2*x2)*x6 + 8*V2*x1*(x2*x2)*x3*x6 - 16*VA*x1*(x2*x2)*x3*x6 + 6*V2*(x2*x2*x2)*x3*x6 + 4*VA*(x2*x2*x2)*x3*x6 - 2*V2*(x2*x2)*(x3*x3)*x6 - 4*VA*(x2*x2)*(x3*x3)*x6 + 8*V2*x1*(x2*x2)*x4*x6 - 16*VA*x1*(x2*x2)*x4*x6 + 6*V2*(x2*x2*x2)*x4*x6 - 12*VA*(x2*x2*x2)*x4*x6 + 2*V2*(x2*x2)*x3*x4*x6 - 4*VA*(x2*x2)*x3*x4*x6 + 16*V2*x1*(x2*x2)*x5*x6 + 8*V2*(x2*x2*x2)*x5*x6 - 6*V2*x1*x2*x3*x5*x6 - 12*VA*x1*x2*x3*x5*x6 - 4*V2*(x2*x2)*x3*x5*x6 - 8*VA*(x2*x2)*x3*x5*x6 - 6*V2*x1*x2*x4*x5*x6 + 12*VA*x1*x2*x4*x5*x6 - 4*V2*(x2*x2)*x4*x5*x6 + 8*VA*(x2*x2)*x4*x5*x6 - 18*V2*x1*x2*(x5*x5)*x6 - 36*VA*x1*x2*(x5*x5)*x6 - 4*V2*(x2*x2)*(x5*x5)*x6 - 8*VA*(x2*x2)*(x5*x5)*x6 + 6*V2*x1*x3*(x5*x5)*x6 + 12*VA*x1*x3*(x5*x5)*x6 + 12*V2*x1*(x5*x5*x5)*x6 + 24*VA*x1*(x5*x5*x5)*x6 - 3*V2*(x1*x1)*x2*(x6*x6) + 6*VA*(x1*x1)*x2*(x6*x6) + 12*V2*x1*(x2*x2)*(x6*x6) - 24*VA*x1*(x2*x2)*(x6*x6) + 8*V2*(x2*x2*x2)*(x6*x6) - 16*VA*(x2*x2*x2)*(x6*x6) - 12*V2*x1*x2*x3*(x6*x6) + 24*VA*x1*x2*x3*(x6*x6) - 6*V2*x1*x2*x4*(x6*x6) + 12*VA*x1*x2*x4*(x6*x6) - 4*V2*(x2*x2)*x4*(x6*x6) + 8*VA*(x2*x2)*x4*(x6*x6) - 18*V2*x1*x2*x5*(x6*x6) + 36*VA*x1*x2*x5*(x6*x6) - 4*V2*(x2*x2)*x5*(x6*x6) + 8*VA*(x2*x2)*x5*(x6*x6) + 6*V2*x1*x4*x5*(x6*x6) - 12*VA*x1*x4*x5*(x6*x6) - 6*V2*x1*x2*(x6*x6*x6) + 12*VA*x1*x2*(x6*x6*x6) - 4*V2*(x2*x2)*(x6*x6*x6) + 8*VA*(x2*x2)*(x6*x6*x6) + 6*V2*x1*x3*(x6*x6*x6) - 12*VA*x1*x3*(x6*x6*x6) + 12*V2*x1*x5*(x6*x6*x6) - 24*VA*x1*x5*(x6*x6*x6) + 2*(ml1*ml1*ml1)*ml2*V2*(x2*x2)*(-x2 + x5 + x6) + ml2*ml2*ml2*ml2*(x2*x2)*(2*VA*(x2 - x5 - x6) + V2*(-x5 + x6)) + ml1*ml1*ml1*ml1*(x2*x2)*(V2*(x5 - x6) + 2*VA*(-x2 + x5 + x6)) - 2*ml1*ml2*V2*(ml2*ml2*(x2*x2)*(x2 - x5 - x6) + x1*(x2*x2*x2 - 6*(x2*x2)*(x5 + x6) - 6*x5*x6*(x5 + x6) + 3*x2*(x5*x5 + 4*x5*x6 + x6*x6)) + x2*x2*(4*(x2*x2) + (x5 + x6)*(x3 + x4 + 2*(x5 + x6)) - x2*(3*x3 + 3*x4 + 4*(x5 + x6)))) - ml2*ml2*(V2*(-2*(x2*x2*x2*x2) + x2*x2*x2*(x3 + x4 + 4*x5) + x2*x2*(-2*x5*(x3 - x4 + 2*x5) + x1*(3*x5 - x6)) + 6*x1*x5*(x5 - x6)*x6 + 3*x1*x2*(-(x5*x5) + x6*x6)) + 2*VA*(x2*x2*(-2*(x2*x2) - 2*(x3 + 2*x5)*(x5 + x6) + x2*(3*x3 + x4 + 6*x5 + 2*x6)) + x1*(x2*x2*x2 + 3*(x2*x2)*(x5 + x6) + 6*x5*x6*(x5 + x6) - 3*x2*(x5*x5 + 4*x5*x6 + x6*x6)))) + ml1*ml1*(V2*(2*(x2*x2*x2*x2) + 6*x1*x5*(x5 - x6)*x6 - x2*x2*x2*(x3 + x4 + 4*x6) + 3*x1*x2*(-(x5*x5) + x6*x6) + x2*x2*(x1*(x5 - 3*x6) + 2*x6*(-x3 + x4 + 2*x6))) + 2*VA*(x2*x2*(-2*(x2*x2) - 2*(x5 + x6)*(x4 + 2*x6) + x2*(x3 + 3*x4 + 2*x5 + 6*x6)) + x1*(x2*x2*x2 + 3*(x2*x2)*(x5 + x6) + 6*x5*x6*(x5 + x6) - 3*x2*(x5*x5 + 4*x5*x6 + x6*x6))))) + x2*x2*(4*(Mn*Mn)*V2*x1*(x2*x2*x2*x2) - 8*(Mn*Mn)*V2*(x2*x2*x2*x2*x2) - 2*(Mn*Mn)*V2*x1*(x2*x2*x2)*x3 - 4*(Mn*Mn)*VA*x1*(x2*x2*x2)*x3 + 12*(Mn*Mn)*V2*(x2*x2*x2*x2)*x3 + 8*(Mn*Mn)*VA*(x2*x2*x2*x2)*x3 - 4*(Mn*Mn)*V2*(x2*x2*x2)*(x3*x3) - 8*(Mn*Mn)*VA*(x2*x2*x2)*(x3*x3) - 2*(Mn*Mn)*V2*x1*(x2*x2*x2)*x4 + 4*(Mn*Mn)*VA*x1*(x2*x2*x2)*x4 + 12*(Mn*Mn)*V2*(x2*x2*x2*x2)*x4 - 8*(Mn*Mn)*VA*(x2*x2*x2*x2)*x4 - 8*(Mn*Mn)*V2*(x2*x2*x2)*x3*x4 - 4*(Mn*Mn)*V2*(x2*x2*x2)*(x4*x4) + 8*(Mn*Mn)*VA*(x2*x2*x2)*(x4*x4) - 4*(Mn*Mn)*V2*(x1*x1)*(x2*x2)*x5 - 8*(Mn*Mn)*VA*(x1*x1)*(x2*x2)*x5 + V2*(x1*x1*x1)*(x2*x2)*x5 + 2*VA*(x1*x1*x1)*(x2*x2)*x5 + 4*(Mn*Mn)*V2*x1*(x2*x2*x2)*x5 + 8*(Mn*Mn)*VA*x1*(x2*x2*x2)*x5 - 2*V2*(x1*x1)*(x2*x2*x2)*x5 - 4*VA*(x1*x1)*(x2*x2*x2)*x5 + 16*(Mn*Mn)*V2*(x2*x2*x2*x2)*x5 + 16*(Mn*Mn)*VA*(x2*x2*x2*x2)*x5 - 8*(Mn*Mn)*V2*x1*(x2*x2)*x3*x5 - 16*(Mn*Mn)*VA*x1*(x2*x2)*x3*x5 + 2*V2*(x1*x1)*(x2*x2)*x3*x5 + 4*VA*(x1*x1)*(x2*x2)*x3*x5 - 12*(Mn*Mn)*V2*(x2*x2*x2)*x3*x5 - 24*(Mn*Mn)*VA*(x2*x2*x2)*x3*x5 - 8*(Mn*Mn)*V2*x1*(x2*x2)*x4*x5 - 16*(Mn*Mn)*VA*x1*(x2*x2)*x4*x5 + 2*V2*(x1*x1)*(x2*x2)*x4*x5 + 4*VA*(x1*x1)*(x2*x2)*x4*x5 - 12*(Mn*Mn)*V2*(x2*x2*x2)*x4*x5 + 8*(Mn*Mn)*VA*(x2*x2*x2)*x4*x5 - 4*(Mn*Mn)*V2*(x2*x2)*x3*x4*x5 - 8*(Mn*Mn)*VA*(x2*x2)*x3*x4*x5 + 4*(Mn*Mn)*V2*(x2*x2)*(x4*x4)*x5 - 8*(Mn*Mn)*VA*(x2*x2)*(x4*x4)*x5 + 2*(Mn*Mn)*V2*(x1*x1)*x2*(x5*x5) + 4*(Mn*Mn)*VA*(x1*x1)*x2*(x5*x5) - V2*(x1*x1*x1)*x2*(x5*x5) - 2*VA*(x1*x1*x1)*x2*(x5*x5) - 8*(Mn*Mn)*V2*x1*(x2*x2)*(x5*x5) - 16*(Mn*Mn)*VA*x1*(x2*x2)*(x5*x5) + 4*V2*(x1*x1)*(x2*x2)*(x5*x5) + 8*VA*(x1*x1)*(x2*x2)*(x5*x5) - 16*(Mn*Mn)*V2*(x2*x2*x2)*(x5*x5) - 32*(Mn*Mn)*VA*(x2*x2*x2)*(x5*x5) + 4*(Mn*Mn)*V2*x1*x2*x3*(x5*x5) + 8*(Mn*Mn)*VA*x1*x2*x3*(x5*x5) - 2*V2*(x1*x1)*x2*x3*(x5*x5) - 4*VA*(x1*x1)*x2*x3*(x5*x5) + 8*(Mn*Mn)*V2*(x2*x2)*x3*(x5*x5) + 16*(Mn*Mn)*VA*(x2*x2)*x3*(x5*x5) + 8*(Mn*Mn)*V2*x1*x2*x4*(x5*x5) + 16*(Mn*Mn)*VA*x1*x2*x4*(x5*x5) - 4*V2*(x1*x1)*x2*x4*(x5*x5) - 8*VA*(x1*x1)*x2*x4*(x5*x5) + 4*(Mn*Mn)*V2*x1*x2*(x5*x5*x5) + 8*(Mn*Mn)*VA*x1*x2*(x5*x5*x5) - 2*V2*(x1*x1)*x2*(x5*x5*x5) - 4*VA*(x1*x1)*x2*(x5*x5*x5) + 8*(Mn*Mn)*V2*(x2*x2)*(x5*x5*x5) + 16*(Mn*Mn)*VA*(x2*x2)*(x5*x5*x5) - 4*(Mn*Mn)*V2*x1*x4*(x5*x5*x5) - 8*(Mn*Mn)*VA*x1*x4*(x5*x5*x5) + 2*V2*(x1*x1)*x4*(x5*x5*x5) + 4*VA*(x1*x1)*x4*(x5*x5*x5) + 4*(ml1*ml1*ml1)*ml2*(Mn*Mn)*V2*(x2*x2)*(x2 - x5 - x6) - 4*(Mn*Mn)*V2*(x1*x1)*(x2*x2)*x6 + 8*(Mn*Mn)*VA*(x1*x1)*(x2*x2)*x6 + V2*(x1*x1*x1)*(x2*x2)*x6 - 2*VA*(x1*x1*x1)*(x2*x2)*x6 + 4*(Mn*Mn)*V2*x1*(x2*x2*x2)*x6 - 8*(Mn*Mn)*VA*x1*(x2*x2*x2)*x6 - 2*V2*(x1*x1)*(x2*x2*x2)*x6 + 4*VA*(x1*x1)*(x2*x2*x2)*x6 + 16*(Mn*Mn)*V2*(x2*x2*x2*x2)*x6 - 16*(Mn*Mn)*VA*(x2*x2*x2*x2)*x6 - 8*(Mn*Mn)*V2*x1*(x2*x2)*x3*x6 + 16*(Mn*Mn)*VA*x1*(x2*x2)*x3*x6 + 2*V2*(x1*x1)*(x2*x2)*x3*x6 - 4*VA*(x1*x1)*(x2*x2)*x3*x6 - 12*(Mn*Mn)*V2*(x2*x2*x2)*x3*x6 - 8*(Mn*Mn)*VA*(x2*x2*x2)*x3*x6 + 4*(Mn*Mn)*V2*(x2*x2)*(x3*x3)*x6 + 8*(Mn*Mn)*VA*(x2*x2)*(x3*x3)*x6 - 8*(Mn*Mn)*V2*x1*(x2*x2)*x4*x6 + 16*(Mn*Mn)*VA*x1*(x2*x2)*x4*x6 + 2*V2*(x1*x1)*(x2*x2)*x4*x6 - 4*VA*(x1*x1)*(x2*x2)*x4*x6 - 12*(Mn*Mn)*V2*(x2*x2*x2)*x4*x6 + 24*(Mn*Mn)*VA*(x2*x2*x2)*x4*x6 - 4*(Mn*Mn)*V2*(x2*x2)*x3*x4*x6 + 8*(Mn*Mn)*VA*(x2*x2)*x3*x4*x6 - 16*(Mn*Mn)*V2*x1*(x2*x2)*x5*x6 + 4*V2*(x1*x1)*(x2*x2)*x5*x6 - 16*(Mn*Mn)*V2*(x2*x2*x2)*x5*x6 + 4*(Mn*Mn)*V2*x1*x2*x3*x5*x6 + 8*(Mn*Mn)*VA*x1*x2*x3*x5*x6 - 2*V2*(x1*x1)*x2*x3*x5*x6 - 4*VA*(x1*x1)*x2*x3*x5*x6 + 8*(Mn*Mn)*V2*(x2*x2)*x3*x5*x6 + 16*(Mn*Mn)*VA*(x2*x2)*x3*x5*x6 + 4*(Mn*Mn)*V2*x1*x2*x4*x5*x6 - 8*(Mn*Mn)*VA*x1*x2*x4*x5*x6 - 2*V2*(x1*x1)*x2*x4*x5*x6 + 4*VA*(x1*x1)*x2*x4*x5*x6 + 8*(Mn*Mn)*V2*(x2*x2)*x4*x5*x6 - 16*(Mn*Mn)*VA*(x2*x2)*x4*x5*x6 + 12*(Mn*Mn)*V2*x1*x2*(x5*x5)*x6 + 24*(Mn*Mn)*VA*x1*x2*(x5*x5)*x6 - 6*V2*(x1*x1)*x2*(x5*x5)*x6 - 12*VA*(x1*x1)*x2*(x5*x5)*x6 + 8*(Mn*Mn)*V2*(x2*x2)*(x5*x5)*x6 + 16*(Mn*Mn)*VA*(x2*x2)*(x5*x5)*x6 - 4*(Mn*Mn)*V2*x1*x3*(x5*x5)*x6 - 8*(Mn*Mn)*VA*x1*x3*(x5*x5)*x6 + 2*V2*(x1*x1)*x3*(x5*x5)*x6 + 4*VA*(x1*x1)*x3*(x5*x5)*x6 - 8*(Mn*Mn)*V2*x1*(x5*x5*x5)*x6 - 16*(Mn*Mn)*VA*x1*(x5*x5*x5)*x6 + 4*V2*(x1*x1)*(x5*x5*x5)*x6 + 8*VA*(x1*x1)*(x5*x5*x5)*x6 + 2*(Mn*Mn)*V2*(x1*x1)*x2*(x6*x6) - 4*(Mn*Mn)*VA*(x1*x1)*x2*(x6*x6) - V2*(x1*x1*x1)*x2*(x6*x6) + 2*VA*(x1*x1*x1)*x2*(x6*x6) - 8*(Mn*Mn)*V2*x1*(x2*x2)*(x6*x6) + 16*(Mn*Mn)*VA*x1*(x2*x2)*(x6*x6) + 4*V2*(x1*x1)*(x2*x2)*(x6*x6) - 8*VA*(x1*x1)*(x2*x2)*(x6*x6) - 16*(Mn*Mn)*V2*(x2*x2*x2)*(x6*x6) + 32*(Mn*Mn)*VA*(x2*x2*x2)*(x6*x6) + 8*(Mn*Mn)*V2*x1*x2*x3*(x6*x6) - 16*(Mn*Mn)*VA*x1*x2*x3*(x6*x6) - 4*V2*(x1*x1)*x2*x3*(x6*x6) + 8*VA*(x1*x1)*x2*x3*(x6*x6) + 4*(Mn*Mn)*V2*x1*x2*x4*(x6*x6) - 8*(Mn*Mn)*VA*x1*x2*x4*(x6*x6) - 2*V2*(x1*x1)*x2*x4*(x6*x6) + 4*VA*(x1*x1)*x2*x4*(x6*x6) + 8*(Mn*Mn)*V2*(x2*x2)*x4*(x6*x6) - 16*(Mn*Mn)*VA*(x2*x2)*x4*(x6*x6) + 12*(Mn*Mn)*V2*x1*x2*x5*(x6*x6) - 24*(Mn*Mn)*VA*x1*x2*x5*(x6*x6) - 6*V2*(x1*x1)*x2*x5*(x6*x6) + 12*VA*(x1*x1)*x2*x5*(x6*x6) + 8*(Mn*Mn)*V2*(x2*x2)*x5*(x6*x6) - 16*(Mn*Mn)*VA*(x2*x2)*x5*(x6*x6) - 4*(Mn*Mn)*V2*x1*x4*x5*(x6*x6) + 8*(Mn*Mn)*VA*x1*x4*x5*(x6*x6) + 2*V2*(x1*x1)*x4*x5*(x6*x6) - 4*VA*(x1*x1)*x4*x5*(x6*x6) + 4*(Mn*Mn)*V2*x1*x2*(x6*x6*x6) - 8*(Mn*Mn)*VA*x1*x2*(x6*x6*x6) - 2*V2*(x1*x1)*x2*(x6*x6*x6) + 4*VA*(x1*x1)*x2*(x6*x6*x6) + 8*(Mn*Mn)*V2*(x2*x2)*(x6*x6*x6) - 16*(Mn*Mn)*VA*(x2*x2)*(x6*x6*x6) - 4*(Mn*Mn)*V2*x1*x3*(x6*x6*x6) + 8*(Mn*Mn)*VA*x1*x3*(x6*x6*x6) + 2*V2*(x1*x1)*x3*(x6*x6*x6) - 4*VA*(x1*x1)*x3*(x6*x6*x6) - 8*(Mn*Mn)*V2*x1*x5*(x6*x6*x6) + 16*(Mn*Mn)*VA*x1*x5*(x6*x6*x6) + 4*V2*(x1*x1)*x5*(x6*x6*x6) - 8*VA*(x1*x1)*x5*(x6*x6*x6) + 2*(ml1*ml1*ml1*ml1)*(Mn*Mn)*(x2*x2)*(2*VA*(x2 - x5 - x6) + V2*(-x5 + x6)) + 2*(ml2*ml2*ml2*ml2)*(Mn*Mn)*(x2*x2)*(V2*(x5 - x6) + 2*VA*(-x2 + x5 + x6)) + 2*ml1*ml2*V2*(2*(ml2*ml2)*(Mn*Mn)*(x2*x2)*(x2 - x5 - x6) - x1*x1*(x2*x2*x2 - 2*(x2*x2)*(x5 + x6) - 2*x5*x6*(x5 + x6) + x2*(x5*x5 + 4*x5*x6 + x6*x6)) + 2*(Mn*Mn)*(-(x1*(x2*x2*x2 + 2*(x2*x2)*(x5 + x6) + 2*x5*x6*(x5 + x6) - x2*(x5*x5 + 4*x5*x6 + x6*x6))) + x2*x2*(4*(x2*x2) + (x5 + x6)*(x3 + x4 + 2*(x5 + x6)) - x2*(3*x3 + 3*x4 + 4*(x5 + x6))))) + ml2*ml2*(x1*x1*(-(V2*(x5 - x6)*(x2*x2 + 2*x5*x6 - x2*(x5 + x6))) - 2*VA*(x2*x2*(x5 + x6) + 2*x5*x6*(x5 + x6) - x2*(x5*x5 + 4*x5*x6 + x6*x6))) + 2*(Mn*Mn)*(V2*(-2*(x2*x2*x2*x2) + x2*x2*x2*(x3 + x4 + 4*x5) + 2*x1*x5*(x5 - x6)*x6 + x1*x2*(-(x5*x5) + x6*x6) + x2*x2*(-2*x5*(x3 - x4 + 2*x5) + x1*(x5 + x6))) + 2*VA*(x2*x2*(-2*(x2*x2) - 2*(x3 + 2*x5)*(x5 + x6) + x2*(3*x3 + x4 + 6*x5 + 2*x6)) + x1*(x2*x2*x2 + x2*x2*(x5 + x6) + 2*x5*x6*(x5 + x6) - x2*(x5*x5 + 4*x5*x6 + x6*x6))))) + ml1*ml1*(x1*x1*(V2*(x5 - x6)*(x2*x2 + 2*x5*x6 - x2*(x5 + x6)) + 2*VA*(x2*x2*(x5 + x6) + 2*x5*x6*(x5 + x6) - x2*(x5*x5 + 4*x5*x6 + x6*x6))) - 2*(Mn*Mn)*(V2*(2*(x2*x2*x2*x2) + 2*x1*x5*(x5 - x6)*x6 - x2*x2*x2*(x3 + x4 + 4*x6) + x1*x2*(-(x5*x5) + x6*x6) - x2*x2*(2*(x3 - x4 - 2*x6)*x6 + x1*(x5 + x6))) + 2*VA*(x2*x2*(-2*(x2*x2) - 2*(x5 + x6)*(x4 + 2*x6) + x2*(x3 + 3*x4 + 2*x5 + 6*x6)) + x1*(x2*x2*x2 + x2*x2*(x5 + x6) + 2*x5*x6*(x5 + x6) - x2*(x5*x5 + 4*x5*x6 + x6*x6)))))) + A2*(2*(Enu*Enu)*(Mn*Mn)*x1*(-2*x1*(x2*x2*x2*x2) + 4*(x2*x2*x2*x2*x2) + x1*(x2*x2*x2)*x3 - 6*(x2*x2*x2*x2)*x3 + 2*(x2*x2*x2)*(x3*x3) + x1*(x2*x2*x2)*x4 - 6*(x2*x2*x2*x2)*x4 + 4*(x2*x2*x2)*x3*x4 + 2*(x2*x2*x2)*(x4*x4) + 4*(x1*x1)*(x2*x2)*x5 - 6*x1*(x2*x2*x2)*x5 - 8*(x2*x2*x2*x2)*x5 + 8*x1*(x2*x2)*x3*x5 + 6*(x2*x2*x2)*x3*x5 + 8*x1*(x2*x2)*x4*x5 + 6*(x2*x2*x2)*x4*x5 + 2*(x2*x2)*x3*x4*x5 - 2*(x2*x2)*(x4*x4)*x5 - 3*(x1*x1)*x2*(x5*x5) + 12*x1*(x2*x2)*(x5*x5) + 8*(x2*x2*x2)*(x5*x5) - 6*x1*x2*x3*(x5*x5) - 4*(x2*x2)*x3*(x5*x5) - 12*x1*x2*x4*(x5*x5) - 6*x1*x2*(x5*x5*x5) - 4*(x2*x2)*(x5*x5*x5) + 6*x1*x4*(x5*x5*x5) + 2*(ml1*ml1*ml1)*ml2*(x2*x2)*(x2 - x5 - x6) + ml1*ml1*ml1*ml1*(x2*x2)*(x5 - x6) + 4*(x1*x1)*(x2*x2)*x6 - 6*x1*(x2*x2*x2)*x6 - 8*(x2*x2*x2*x2)*x6 + 8*x1*(x2*x2)*x3*x6 + 6*(x2*x2*x2)*x3*x6 - 2*(x2*x2)*(x3*x3)*x6 + 8*x1*(x2*x2)*x4*x6 + 6*(x2*x2*x2)*x4*x6 + 2*(x2*x2)*x3*x4*x6 + 16*x1*(x2*x2)*x5*x6 + 8*(x2*x2*x2)*x5*x6 - 6*x1*x2*x3*x5*x6 - 4*(x2*x2)*x3*x5*x6 - 6*x1*x2*x4*x5*x6 - 4*(x2*x2)*x4*x5*x6 - 18*x1*x2*(x5*x5)*x6 - 4*(x2*x2)*(x5*x5)*x6 + 6*x1*x3*(x5*x5)*x6 + 12*x1*(x5*x5*x5)*x6 - 3*(x1*x1)*x2*(x6*x6) + 12*x1*(x2*x2)*(x6*x6) + 8*(x2*x2*x2)*(x6*x6) - 12*x1*x2*x3*(x6*x6) - 6*x1*x2*x4*(x6*x6) - 4*(x2*x2)*x4*(x6*x6) - 18*x1*x2*x5*(x6*x6) - 4*(x2*x2)*x5*(x6*x6) + 6*x1*x4*x5*(x6*x6) - 6*x1*x2*(x6*x6*x6) - 4*(x2*x2)*(x6*x6*x6) + 6*x1*x3*(x6*x6*x6) + 12*x1*x5*(x6*x6*x6) + ml2*ml2*ml2*ml2*(x2*x2)*(-x5 + x6) + ml2*ml2*(2*(x2*x2*x2*x2) - x2*x2*x2*(x3 + x4 + 4*x5) + 6*x1*x5*x6*(-x5 + x6) + 3*x1*x2*(x5*x5 - x6*x6) + x2*x2*(2*x5*(x3 - x4 + 2*x5) + x1*(-3*x5 + x6))) + ml1*ml1*(2*(x2*x2*x2*x2) + 6*x1*x5*(x5 - x6)*x6 - x2*x2*x2*(x3 + x4 + 4*x6) + 3*x1*x2*(-(x5*x5) + x6*x6) + x2*x2*(x1*(x5 - 3*x6) + 2*x6*(-x3 + x4 + 2*x6))) + 2*ml1*ml2*(ml2*ml2*(x2*x2)*(x2 - x5 - x6) + x1*(x2*x2*x2 - 6*(x2*x2)*(x5 + x6) - 6*x5*x6*(x5 + x6) + 3*x2*(x5*x5 + 4*x5*x6 + x6*x6)) + x2*x2*(4*(x2*x2) + (x5 + x6)*(x3 + x4 + 2*(x5 + x6)) - x2*(3*x3 + 3*x4 + 4*(x5 + x6))))) - 2*Enu*Mn*x1*x2*(-2*x1*(x2*x2*x2*x2) + 4*(x2*x2*x2*x2*x2) + x1*(x2*x2*x2)*x3 - 6*(x2*x2*x2*x2)*x3 + 2*(x2*x2*x2)*(x3*x3) + x1*(x2*x2*x2)*x4 - 6*(x2*x2*x2*x2)*x4 + 4*(x2*x2*x2)*x3*x4 + 2*(x2*x2*x2)*(x4*x4) + 4*(x1*x1)*(x2*x2)*x5 - 6*x1*(x2*x2*x2)*x5 - 8*(x2*x2*x2*x2)*x5 + 8*x1*(x2*x2)*x3*x5 + 6*(x2*x2*x2)*x3*x5 + 8*x1*(x2*x2)*x4*x5 + 6*(x2*x2*x2)*x4*x5 + 2*(x2*x2)*x3*x4*x5 - 2*(x2*x2)*(x4*x4)*x5 - 3*(x1*x1)*x2*(x5*x5) + 12*x1*(x2*x2)*(x5*x5) + 8*(x2*x2*x2)*(x5*x5) - 6*x1*x2*x3*(x5*x5) - 4*(x2*x2)*x3*(x5*x5) - 12*x1*x2*x4*(x5*x5) - 6*x1*x2*(x5*x5*x5) - 4*(x2*x2)*(x5*x5*x5) + 6*x1*x4*(x5*x5*x5) + 2*(ml1*ml1*ml1)*ml2*(x2*x2)*(x2 - x5 - x6) + ml1*ml1*ml1*ml1*(x2*x2)*(x5 - x6) + 4*(x1*x1)*(x2*x2)*x6 - 6*x1*(x2*x2*x2)*x6 - 8*(x2*x2*x2*x2)*x6 + 8*x1*(x2*x2)*x3*x6 + 6*(x2*x2*x2)*x3*x6 - 2*(x2*x2)*(x3*x3)*x6 + 8*x1*(x2*x2)*x4*x6 + 6*(x2*x2*x2)*x4*x6 + 2*(x2*x2)*x3*x4*x6 + 16*x1*(x2*x2)*x5*x6 + 8*(x2*x2*x2)*x5*x6 - 6*x1*x2*x3*x5*x6 - 4*(x2*x2)*x3*x5*x6 - 6*x1*x2*x4*x5*x6 - 4*(x2*x2)*x4*x5*x6 - 18*x1*x2*(x5*x5)*x6 - 4*(x2*x2)*(x5*x5)*x6 + 6*x1*x3*(x5*x5)*x6 + 12*x1*(x5*x5*x5)*x6 - 3*(x1*x1)*x2*(x6*x6) + 12*x1*(x2*x2)*(x6*x6) + 8*(x2*x2*x2)*(x6*x6) - 12*x1*x2*x3*(x6*x6) - 6*x1*x2*x4*(x6*x6) - 4*(x2*x2)*x4*(x6*x6) - 18*x1*x2*x5*(x6*x6) - 4*(x2*x2)*x5*(x6*x6) + 6*x1*x4*x5*(x6*x6) - 6*x1*x2*(x6*x6*x6) - 4*(x2*x2)*(x6*x6*x6) + 6*x1*x3*(x6*x6*x6) + 12*x1*x5*(x6*x6*x6) + ml2*ml2*ml2*ml2*(x2*x2)*(-x5 + x6) + ml2*ml2*(2*(x2*x2*x2*x2) - x2*x2*x2*(x3 + x4 + 4*x5) + 6*x1*x5*x6*(-x5 + x6) + 3*x1*x2*(x5*x5 - x6*x6) + x2*x2*(2*x5*(x3 - x4 + 2*x5) + x1*(-3*x5 + x6))) + ml1*ml1*(2*(x2*x2*x2*x2) + 6*x1*x5*(x5 - x6)*x6 - x2*x2*x2*(x3 + x4 + 4*x6) + 3*x1*x2*(-(x5*x5) + x6*x6) + x2*x2*(x1*(x5 - 3*x6) + 2*x6*(-x3 + x4 + 2*x6))) + 2*ml1*ml2*(ml2*ml2*(x2*x2)*(x2 - x5 - x6) + x1*(x2*x2*x2 - 6*(x2*x2)*(x5 + x6) - 6*x5*x6*(x5 + x6) + 3*x2*(x5*x5 + 4*x5*x6 + x6*x6)) + x2*x2*(4*(x2*x2) + (x5 + x6)*(x3 + x4 + 2*(x5 + x6)) - x2*(3*x3 + 3*x4 + 4*(x5 + x6))))) + x2*x2*(-4*(ml2*ml2)*(Mn*Mn)*(x2*x2*x2*x2) + 4*(Mn*Mn)*x1*(x2*x2*x2*x2) - 8*(Mn*Mn)*(x2*x2*x2*x2*x2) + 2*(ml2*ml2)*(Mn*Mn)*(x2*x2*x2)*x3 - 2*(Mn*Mn)*x1*(x2*x2*x2)*x3 + 12*(Mn*Mn)*(x2*x2*x2*x2)*x3 - 4*(Mn*Mn)*(x2*x2*x2)*(x3*x3) + 2*(ml2*ml2)*(Mn*Mn)*(x2*x2*x2)*x4 - 2*(Mn*Mn)*x1*(x2*x2*x2)*x4 + 12*(Mn*Mn)*(x2*x2*x2*x2)*x4 - 8*(Mn*Mn)*(x2*x2*x2)*x3*x4 - 4*(Mn*Mn)*(x2*x2*x2)*(x4*x4) + 2*(ml2*ml2*ml2*ml2)*(Mn*Mn)*(x2*x2)*x5 + 2*(ml2*ml2)*(Mn*Mn)*x1*(x2*x2)*x5 - ml2*ml2*(x1*x1)*(x2*x2)*x5 - 4*(Mn*Mn)*(x1*x1)*(x2*x2)*x5 + x1*x1*x1*(x2*x2)*x5 + 8*(ml2*ml2)*(Mn*Mn)*(x2*x2*x2)*x5 + 4*(Mn*Mn)*x1*(x2*x2*x2)*x5 - 2*(x1*x1)*(x2*x2*x2)*x5 + 16*(Mn*Mn)*(x2*x2*x2*x2)*x5 - 4*(ml2*ml2)*(Mn*Mn)*(x2*x2)*x3*x5 - 8*(Mn*Mn)*x1*(x2*x2)*x3*x5 + 2*(x1*x1)*(x2*x2)*x3*x5 - 12*(Mn*Mn)*(x2*x2*x2)*x3*x5 + 4*(ml2*ml2)*(Mn*Mn)*(x2*x2)*x4*x5 - 8*(Mn*Mn)*x1*(x2*x2)*x4*x5 + 2*(x1*x1)*(x2*x2)*x4*x5 - 12*(Mn*Mn)*(x2*x2*x2)*x4*x5 - 4*(Mn*Mn)*(x2*x2)*x3*x4*x5 + 4*(Mn*Mn)*(x2*x2)*(x4*x4)*x5 - 2*(ml2*ml2)*(Mn*Mn)*x1*x2*(x5*x5) + ml2*ml2*(x1*x1)*x2*(x5*x5) + 2*(Mn*Mn)*(x1*x1)*x2*(x5*x5) - x1*x1*x1*x2*(x5*x5) - 8*(ml2*ml2)*(Mn*Mn)*(x2*x2)*(x5*x5) - 8*(Mn*Mn)*x1*(x2*x2)*(x5*x5) + 4*(x1*x1)*(x2*x2)*(x5*x5) - 16*(Mn*Mn)*(x2*x2*x2)*(x5*x5) + 4*(Mn*Mn)*x1*x2*x3*(x5*x5) - 2*(x1*x1)*x2*x3*(x5*x5) + 8*(Mn*Mn)*(x2*x2)*x3*(x5*x5) + 8*(Mn*Mn)*x1*x2*x4*(x5*x5) - 4*(x1*x1)*x2*x4*(x5*x5) + 4*(Mn*Mn)*x1*x2*(x5*x5*x5) - 2*(x1*x1)*x2*(x5*x5*x5) + 8*(Mn*Mn)*(x2*x2)*(x5*x5*x5) - 4*(Mn*Mn)*x1*x4*(x5*x5*x5) + 2*(x1*x1)*x4*(x5*x5*x5) - 2*(ml2*ml2*ml2*ml2)*(Mn*Mn)*(x2*x2)*x6 + 2*(ml2*ml2)*(Mn*Mn)*x1*(x2*x2)*x6 + ml2*ml2*(x1*x1)*(x2*x2)*x6 - 4*(Mn*Mn)*(x1*x1)*(x2*x2)*x6 + x1*x1*x1*(x2*x2)*x6 + 4*(Mn*Mn)*x1*(x2*x2*x2)*x6 - 2*(x1*x1)*(x2*x2*x2)*x6 + 16*(Mn*Mn)*(x2*x2*x2*x2)*x6 - 8*(Mn*Mn)*x1*(x2*x2)*x3*x6 + 2*(x1*x1)*(x2*x2)*x3*x6 - 12*(Mn*Mn)*(x2*x2*x2)*x3*x6 + 4*(Mn*Mn)*(x2*x2)*(x3*x3)*x6 - 8*(Mn*Mn)*x1*(x2*x2)*x4*x6 + 2*(x1*x1)*(x2*x2)*x4*x6 - 12*(Mn*Mn)*(x2*x2*x2)*x4*x6 - 4*(Mn*Mn)*(x2*x2)*x3*x4*x6 - 16*(Mn*Mn)*x1*(x2*x2)*x5*x6 + 4*(x1*x1)*(x2*x2)*x5*x6 - 16*(Mn*Mn)*(x2*x2*x2)*x5*x6 + 4*(Mn*Mn)*x1*x2*x3*x5*x6 - 2*(x1*x1)*x2*x3*x5*x6 + 8*(Mn*Mn)*(x2*x2)*x3*x5*x6 + 4*(Mn*Mn)*x1*x2*x4*x5*x6 - 2*(x1*x1)*x2*x4*x5*x6 + 8*(Mn*Mn)*(x2*x2)*x4*x5*x6 + 4*(ml2*ml2)*(Mn*Mn)*x1*(x5*x5)*x6 - 2*(ml2*ml2)*(x1*x1)*(x5*x5)*x6 + 12*(Mn*Mn)*x1*x2*(x5*x5)*x6 - 6*(x1*x1)*x2*(x5*x5)*x6 + 8*(Mn*Mn)*(x2*x2)*(x5*x5)*x6 - 4*(Mn*Mn)*x1*x3*(x5*x5)*x6 + 2*(x1*x1)*x3*(x5*x5)*x6 - 8*(Mn*Mn)*x1*(x5*x5*x5)*x6 + 4*(x1*x1)*(x5*x5*x5)*x6 + 2*(ml2*ml2)*(Mn*Mn)*x1*x2*(x6*x6) - ml2*ml2*(x1*x1)*x2*(x6*x6) + 2*(Mn*Mn)*(x1*x1)*x2*(x6*x6) - x1*x1*x1*x2*(x6*x6) - 8*(Mn*Mn)*x1*(x2*x2)*(x6*x6) + 4*(x1*x1)*(x2*x2)*(x6*x6) - 16*(Mn*Mn)*(x2*x2*x2)*(x6*x6) + 8*(Mn*Mn)*x1*x2*x3*(x6*x6) - 4*(x1*x1)*x2*x3*(x6*x6) + 4*(Mn*Mn)*x1*x2*x4*(x6*x6) - 2*(x1*x1)*x2*x4*(x6*x6) + 8*(Mn*Mn)*(x2*x2)*x4*(x6*x6) - 4*(ml2*ml2)*(Mn*Mn)*x1*x5*(x6*x6) + 2*(ml2*ml2)*(x1*x1)*x5*(x6*x6) + 12*(Mn*Mn)*x1*x2*x5*(x6*x6) - 6*(x1*x1)*x2*x5*(x6*x6) + 8*(Mn*Mn)*(x2*x2)*x5*(x6*x6) - 4*(Mn*Mn)*x1*x4*x5*(x6*x6) + 2*(x1*x1)*x4*x5*(x6*x6) + 4*(Mn*Mn)*x1*x2*(x6*x6*x6) - 2*(x1*x1)*x2*(x6*x6*x6) + 8*(Mn*Mn)*(x2*x2)*(x6*x6*x6) - 4*(Mn*Mn)*x1*x3*(x6*x6*x6) + 2*(x1*x1)*x3*(x6*x6*x6) - 8*(Mn*Mn)*x1*x5*(x6*x6*x6) + 4*(x1*x1)*x5*(x6*x6*x6) + 2*(ml1*ml1*ml1*ml1)*(Mn*Mn)*(x2*x2)*(-x5 + x6) + 4*(ml1*ml1*ml1)*ml2*(Mn*Mn)*(x2*x2)*(-x2 + x5 + x6) + ml1*ml1*(x1*x1*(x5 - x6)*(x2*x2 + 2*x5*x6 - x2*(x5 + x6)) + 2*(Mn*Mn)*(-2*(x2*x2*x2*x2) + 2*x1*x5*x6*(-x5 + x6) + x2*x2*x2*(x3 + x4 + 4*x6) + x1*x2*(x5*x5 - x6*x6) + x2*x2*(2*(x3 - x4 - 2*x6)*x6 + x1*(x5 + x6)))) - 2*ml1*ml2*(2*(ml2*ml2)*(Mn*Mn)*(x2*x2)*(x2 - x5 - x6) - x1*x1*(x2*x2*x2 - 2*(x2*x2)*(x5 + x6) - 2*x5*x6*(x5 + x6) + x2*(x5*x5 + 4*x5*x6 + x6*x6)) + 2*(Mn*Mn)*(-(x1*(x2*x2*x2 + 2*(x2*x2)*(x5 + x6) + 2*x5*x6*(x5 + x6) - x2*(x5*x5 + 4*x5*x6 + x6*x6))) + x2*x2*(4*(x2*x2) + (x5 + x6)*(x3 + x4 + 2*(x5 + x6)) - x2*(3*x3 + 3*x4 + 4*(x5 + x6)))))))))*(Z*Z))/(Enu*Enu*(Mn*Mn)*(x1*x1)*(x2*x2*x2*x2)*((x1 + 2*x3)*(x1 + 2*x3))*((x1 + 2*x4)*(x1 + 2*x4)));
 
   ///////////////////////////////////////////////////////////////////////////////////
   // JACOBIANS AND PREFACTORS 
   dsigma *= Jacob;
+
+  // Changing units to zeptobarn = zb = 1e-45 cm^2
+  dsigma *= (GeV2_to_cm2*1e45);
   
 
-  // Hacky way to avoid non-sensical values for the cross section below thershold
-    if (Enu <=  (SQR(ml1 + ml2) + 2*(ml1 + ml2)*Mn)/2.0/Mn  )
-  {
-    dsigma = 0.0;
-  }
+  myMC->xphys[0] = x1;
+  myMC->xphys[1] = x2;
+  myMC->xphys[2] = x3;
+  myMC->xphys[3] = x4;
+  myMC->xphys[4] = x5;
+  myMC->xphys[5] = x6;
+  myMC->xphys[6] = x7;
+  myMC->xphys[7] = x8;
+  myMC->xphys[8] = Enu;
+  myMC->xphys[9] = dsigma;
 
-  std::vector<long double> xphys;
 
-  xphys.push_back(x1);
-  xphys.push_back(x2);
-  xphys.push_back(x3);
-  xphys.push_back(x4);
-  xphys.push_back(x5);
-  xphys.push_back(x6);
-  xphys.push_back(x7);
-  xphys.push_back(x8);
-  xphys.push_back(Enu);
-  xphys.push_back(dsigma);
-  
-  return xphys;
+  return 0;
 }
 
-std::vector<long double> CohFromIntToPhysical(const cubareal xx[], void *userdata){
+int CohFromIntToPhysical(const cubareal xx[], void *MC){
 
   long double u1_s    = xx[0];
   long double u2_s    = xx[1];
@@ -257,16 +260,14 @@ std::vector<long double> CohFromIntToPhysical(const cubareal xx[], void *userdat
   //////////////////////////////////////////////////
   // get data from user
 
-  tridentMC* myMC = (tridentMC *)userdata;
+  tridentMC* myMC = (tridentMC *)MC;
   
   long double ml1 = myMC->ml1;
   long double ml2 = myMC->ml2;
   long double A = myMC->A;
   long double Z = myMC->Z;
   long double Mn = myMC->Mn;
-
-  long double mzprime;
-  mzprime = myMC->params[1];
+  long double mzprime = myMC->mzprime;
 
   long double Diag11 = myMC->terms[0];
   long double Diag22 = myMC->terms[1];
@@ -284,11 +285,8 @@ std::vector<long double> CohFromIntToPhysical(const cubareal xx[], void *userdat
                   sqrt( SQR(1 - SQR(ml1 + ml2)/2.0/SQR(Enu)*(1+Enu/Mn) ) 
                     - pow(ml1 + ml2, 4)/4.0/pow(Enu,4)*(1 + 2*Enu/Mn) )  );
   long double x1_l = pow(ml1+ml2,4)/(x1_u)/(1.0+2*Enu/Mn);
-
-  long double u1_l = log(x1_l); 
-  long double u1_u = log(x1_u); 
   
-  long double u1 = u1_s*(u1_u-u1_l) + u1_l;
+  long double u1 = u1_s*(log(x1_u)-log(x1_l)) + log(x1_l);
 
   long double x1 = exp(u1);
   // std::cout<<x1_l<<std::endl;
@@ -299,9 +297,8 @@ std::vector<long double> CohFromIntToPhysical(const cubareal xx[], void *userdat
   // long double x2 = x2_s*(x2_u-x2_l) + x2_l;
 
   long double u2_u = (1.0+2.0*Enu/Mn)*(x1_u-x1)*(x1-x1_l)  / ( SQR(ml1 + ml2) + x1*(1+Enu/Mn) + 2*Enu*sqrt(x1+SQR(x1)/4.0/SQR(Mn)) );
-  long double u2_l = 0.0;
 
-  long double u2 = u2_s*(u2_u-u2_l) + u2_l;
+  long double u2 = u2_s*(u2_u-0.0) + 0.0;
 
   long double x2 = 0.5*(u2 + SQR(ml1 + ml2) + x1);
 
@@ -319,11 +316,8 @@ std::vector<long double> CohFromIntToPhysical(const cubareal xx[], void *userdat
   long double x3_l = SQR(ml2)/2.0 * x2/x5 - x1/2.0 * x5/x2;
 
   long double x3_u = 0.5*(2*x2 - x1 + SQR(ml2) - SQR(ml1) )  - x5;
-  
-  long double u3_l = log(2*x3_l + x1);
-  long double u3_u = log(2*x3_u + x1);
 
-  long double u3 = u3_s*(u3_u-u3_l) + u3_l;
+  long double u3 = u3_s*(log(2*x3_u + x1)-log(2*x3_l + x1)) + log(2*x3_l + x1);
 
   long double x3 = 0.5*(exp(u3)- x1);
 
@@ -351,63 +345,73 @@ std::vector<long double> CohFromIntToPhysical(const cubareal xx[], void *userdat
   long double m6_l = 0;
   long double m6_u = 2*E1*E2;
 
-  if (BSM == SMonly)
+  switch ((int) BSM) 
   {
-    u6_l = m6_l;
-    u6_u = m6_u;
-    u6   = u6_s*(u6_u - u6_l) + u6_l;
-    m6 = u6;
-    jacob_u6 = 1.0;
+    case (SMonly):
+      u6_l = m6_l;
+      u6_u = m6_u;
+      u6   = u6_s*(u6_u - u6_l) + u6_l;
+      m6 = u6;
+      jacob_u6 = 1.0;
 
-    V2     = myMC->terms[3];
-    A2     = myMC->terms[4];
-    VA     = myMC->terms[5];
+      V2     = myMC->terms[3];
+      A2     = myMC->terms[4];
+      VA     = myMC->terms[5];
+      break;
+
+    case (INTERFERENCE):
+
+      //////////////////////////////////////////////////////////
+      // BSM PROPAGATOR 
+      // long double prop = (1.0/(-2*(m6/mzprime/mzprime) - 1.0))/mzprime/mzprime;
+      u6_l = log(1.0/(2.0*m6_u + mzprime*mzprime));
+      u6_u = log(1.0/(2.0*m6_l + mzprime*mzprime));
+      u6   = u6_s*(u6_u - u6_l) + u6_l;
+      m6   = -mzprime*mzprime/2.0 + exp(-u6)/2.0;
+
+      prop = -exp(u6);
+      jacob_u6 = exp(-u6)/2.0;
+
+      V2     = myMC->terms[3] * prop;
+      A2     = myMC->terms[4] * prop;
+      VA     = myMC->terms[5] * prop;
+      break;
+
+    case (BSMonly):
+
+      u6_l = 1.0/(2.0*m6_u + mzprime*mzprime);
+      u6_u = 1.0/(2.0*m6_l + mzprime*mzprime);
+      u6   = u6_s*(u6_u - u6_l) + u6_l;
+      m6   = -mzprime*mzprime/2.0 + 1.0/2.0/u6;
+
+      prop = -u6;
+      jacob_u6 = 1.0/(u6*u6)/2.0;
+
+      V2     = myMC->terms[3] * prop*prop;
+      A2     = myMC->terms[4] * prop*prop;
+      VA     = myMC->terms[5] * prop*prop;
+      break;
+    
+    case (SMandBSM):
+     
+      u6_l = m6_l;
+      u6_u = m6_u;
+      u6   = u6_s*(u6_u - u6_l) + u6_l;
+      m6 = u6;
+      jacob_u6 = 1.0;
+
+      prop = 1.0/(2.0*m6 + mzprime*mzprime);
+
+      V2     = (myMC->Vijk + myMC->gprimeV*myMC->gprimeV/2.0/sqrt(2.0)/Gf * myMC->CHARGE * prop)*(myMC->Vijk + myMC->gprimeV*myMC->gprimeV/2.0/sqrt(2.0)/Gf * myMC->CHARGE * prop) ;
+      A2     = (myMC->Aijk + myMC->gprimeA*myMC->gprimeA/2.0/sqrt(2.0)/Gf * myMC->CHARGE * prop)*(myMC->Aijk + myMC->gprimeA*myMC->gprimeA/2.0/sqrt(2.0)/Gf * myMC->CHARGE * prop) ;
+      VA     = (myMC->Aijk + myMC->gprimeA*myMC->gprimeA/2.0/sqrt(2.0)/Gf * myMC->CHARGE * prop)*(myMC->Vijk + myMC->gprimeV*myMC->gprimeV/2.0/sqrt(2.0)/Gf * myMC->CHARGE * prop);
+      break;
+
+    default:
+      std::cout << "Could not determine what contributions (BSM) to include." << std::endl;
+      break;
   }
-  else if(BSM == INTERFERENCE)
-  {
-  //////////////////////////////////////////////////////////
-  // BSM PROPAGATOR 
-    // long double prop = (1.0/(-2*(m6/mzprime/mzprime) - 1.0))/mzprime/mzprime;
-    u6_l = log(1.0/(2.0*m6_u + mzprime*mzprime));
-    u6_u = log(1.0/(2.0*m6_l + mzprime*mzprime));
-    u6   = u6_s*(u6_u - u6_l) + u6_l;
-    m6   = -mzprime*mzprime/2.0 + exp(-u6)/2.0;
 
-    prop = -exp(u6);
-    jacob_u6 = exp(-u6)/2.0;
-
-    V2     = myMC->terms[3] * prop;
-    A2     = myMC->terms[4] * prop;
-    VA     = myMC->terms[5] * prop;
-  }
-  else if(BSM == BSMonly)
-  {    
-    u6_l = 1.0/(2.0*m6_u + mzprime*mzprime);
-    u6_u = 1.0/(2.0*m6_l + mzprime*mzprime);
-    u6   = u6_s*(u6_u - u6_l) + u6_l;
-    m6   = -mzprime*mzprime/2.0 + 1.0/2.0/u6;
-
-    prop = -u6;
-    jacob_u6 = 1.0/(u6*u6)/2.0;
-
-    V2     = myMC->terms[3] * prop*prop;
-    A2     = myMC->terms[4] * prop*prop;
-    VA     = myMC->terms[5] * prop*prop;
-  }
-  else if( BSM == SMandBSM)
-  {
-    u6_l = m6_l;
-    u6_u = m6_u;
-    u6   = u6_s*(u6_u - u6_l) + u6_l;
-    m6 = u6;
-    jacob_u6 = 1.0;
-
-    prop = 1.0/(2.0*m6 + mzprime*mzprime);
-
-    V2     = (myMC->Vijk + myMC->gprimeV*myMC->gprimeV/2.0/sqrt(2.0)/Gf * myMC->CHARGE * prop)*(myMC->Vijk + myMC->gprimeV*myMC->gprimeV/2.0/sqrt(2.0)/Gf * myMC->CHARGE * prop) ;
-    A2     = (myMC->Aijk + myMC->gprimeA*myMC->gprimeA/2.0/sqrt(2.0)/Gf * myMC->CHARGE * prop)*(myMC->Aijk + myMC->gprimeA*myMC->gprimeA/2.0/sqrt(2.0)/Gf * myMC->CHARGE * prop) ;
-    VA     = (myMC->Aijk + myMC->gprimeA*myMC->gprimeA/2.0/sqrt(2.0)/Gf * myMC->CHARGE * prop)*(myMC->Vijk + myMC->gprimeV*myMC->gprimeV/2.0/sqrt(2.0)/Gf * myMC->CHARGE * prop);
-  }
 
   long double C2 = 1.0 - m6 / E1 / E2;
   long double S2 = sqrt(1.0 - SQR(C2));
@@ -428,9 +432,9 @@ std::vector<long double> CohFromIntToPhysical(const cubareal xx[], void *userdat
   long double Jacob =  (Wc2 - SQR(ml1))/8.0/Wc2/E1/E2/x2/pow(2*M_PI,6.0);
 
   // Jacobian due to change from CSW(+Matheus) to better integration variables AND VEGAS
-  Jacob *=  (u1_u-u1_l)*exp(u1)*
-            (u2_u-u2_l)*0.5*
-            (u3_u-u3_l)*0.5*exp(u3)*
+  Jacob *=  (log(x1_u)-log(x1_l))*exp(u1)*
+            (u2_u-0.0)*0.5*
+            (log(2*x3_u + x1)-log(2*x3_l + x1))*0.5*exp(u3)*
             (2*M_PI)*
             (x5_u-x5_l)*
             (u6_u-u6_l)*jacob_u6*
@@ -441,38 +445,31 @@ std::vector<long double> CohFromIntToPhysical(const cubareal xx[], void *userdat
   //////////////////////////////////////////////////////////
   // MATRIX ELEMENT ITSELF
   long double FormFactor = FF_WS(sqrt(x1), A);
-
   // includes Z*Z for the coherent enhancement
   long double dsigma = (8*(alphaQED*alphaQED)*(FormFactor*FormFactor)*(Gf*Gf)*(Diag22*((x1 + 2*x4)*(x1 + 2*x4))*(A2*(-2*(ml2*ml2)*Mn*(x2*x2*x2)*(-(Enu*Enu*Mn*x1) + Enu*x1*x2 + Mn*(x2*x2))*(-(ml1*ml1) + ml2*ml2 - x1 + 2*x2 - 2*x3 - 2*x5) - 2*Mn*(x2*x2*x2)*(-(Enu*Enu*Mn*x1) + Enu*x1*x2 + Mn*(x2*x2))*x3*(-(ml1*ml1) + ml2*ml2 - x1 + 2*x2 - 2*x3 - 2*x5) + 2*(ml2*ml2)*Mn*(x2*x2)*(-(Enu*Enu*Mn*x1) + Enu*x1*x2 + Mn*(x2*x2))*(-(ml1*ml1) + ml2*ml2 - x1 + 2*x2 - 2*x3 - 2*x5)*x5 - x1*x1*(x2*x2)*((-2*Enu*Mn + x2)*(-2*Enu*Mn + x2))*x5*(ml1*ml1 - ml2*ml2 + x1 - 2*x2 + 2*x3 + 2*x5) + 3*Mn*x1*(x2*x2)*(-(Enu*Enu*Mn*x1) + Enu*x1*x2 + Mn*(x2*x2))*x5*(ml1*ml1 - ml2*ml2 + x1 - 2*x2 + 2*x3 + 2*x5) + 2*(x1*x1)*x2*((-2*Enu*Mn + x2)*(-2*Enu*Mn + x2))*(x5*x5)*(ml1*ml1 - ml2*ml2 + x1 - 2*x2 + 2*x3 + 2*x5) - 4*Mn*x1*x2*(-(Enu*Enu*Mn*x1) + Enu*x1*x2 + Mn*(x2*x2))*(x5*x5)*(ml1*ml1 - ml2*ml2 + x1 - 2*x2 + 2*x3 + 2*x5) - x1*x1*((-2*Enu*Mn + x2)*(-2*Enu*Mn + x2))*(x5*x5*x5)*(ml1*ml1 - ml2*ml2 + x1 - 2*x2 + 2*x3 + 2*x5) - 2*Mn*x1*(Enu*Enu*Mn*x1 - Enu*x1*x2 - Mn*(x2*x2))*(x5*x5*x5)*(ml1*ml1 - ml2*ml2 + x1 - 2*x2 + 2*x3 + 2*x5) - 4*ml1*(ml2*ml2*ml2)*Mn*(x2*x2)*(-(Enu*Enu*Mn*x1) + Enu*x1*x2 + Mn*(x2*x2))*(x2 - x5 - x6) + 4*ml1*ml2*Mn*x1*(x2*x2)*(-(Enu*Enu*Mn*x1) + Enu*x1*x2 + Mn*(x2*x2))*(x2 - x5 - x6) + 4*ml1*ml2*Mn*(x2*x2)*(-(Enu*Enu*Mn*x1) + Enu*x1*x2 + Mn*(x2*x2))*x3*(x2 - x5 - x6) + 2*ml1*ml2*(x1*x1)*x2*((-2*Enu*Mn + x2)*(-2*Enu*Mn + x2))*x5*(x2 - x5 - x6) - 4*ml1*ml2*Mn*x1*x2*(-(Enu*Enu*Mn*x1) + Enu*x1*x2 + Mn*(x2*x2))*x5*(x2 - x5 - x6) - 2*ml1*ml2*(x1*x1)*((-2*Enu*Mn + x2)*(-2*Enu*Mn + x2))*(x5*x5)*(x2 - x5 - x6) - 4*ml1*ml2*Mn*x1*(Enu*Enu*Mn*x1 - Enu*x1*x2 - Mn*(x2*x2))*(x5*x5)*(x2 - x5 - x6) - 4*(ml2*ml2)*Mn*(x2*x2)*(-(Enu*Enu*Mn*x1) + Enu*x1*x2 + Mn*(x2*x2))*(-x1 + x2 - x3 - x4)*x6 - 4*Mn*(x2*x2)*(-(Enu*Enu*Mn*x1) + Enu*x1*x2 + Mn*(x2*x2))*x3*(-x1 + x2 - x3 - x4)*x6 - 2*(x1*x1)*x2*((-2*Enu*Mn + x2)*(-2*Enu*Mn + x2))*(x1 - x2 + x3 + x4)*x5*x6 + 4*Mn*x1*x2*(-(Enu*Enu*Mn*x1) + Enu*x1*x2 + Mn*(x2*x2))*(x1 - x2 + x3 + x4)*x5*x6 + 2*(x1*x1)*((-2*Enu*Mn + x2)*(-2*Enu*Mn + x2))*(x1 - x2 + x3 + x4)*(x5*x5)*x6 + 4*Mn*x1*(Enu*Enu*Mn*x1 - Enu*x1*x2 - Mn*(x2*x2))*(x1 - x2 + x3 + x4)*(x5*x5)*x6 + x1*x1*x1*((-2*Enu*Mn + x2)*(-2*Enu*Mn + x2))*x5*(x2 - x5 - x6)*x6 + 2*Mn*(x1*x1)*(Enu*Enu*Mn*x1 - Enu*x1*x2 - Mn*(x2*x2))*x5*(x2 - x5 - x6)*x6 + 2*(x1*x1)*((-2*Enu*Mn + x2)*(-2*Enu*Mn + x2))*x3*x5*(x2 - x5 - x6)*x6 + 4*Mn*x1*(Enu*Enu*Mn*x1 - Enu*x1*x2 - Mn*(x2*x2))*x3*x5*(x2 - x5 - x6)*x6 - 2*(ml2*ml2)*Mn*(x2*x2)*(-(Enu*Enu*Mn*x1) + Enu*x1*x2 + Mn*(x2*x2))*x6*(-(ml1*ml1) + ml2*ml2 + x1 - 2*x2 + 2*x4 + 2*x6) + Mn*x1*(x2*x2)*(-(Enu*Enu*Mn*x1) + Enu*x1*x2 + Mn*(x2*x2))*x6*(-(ml1*ml1) + ml2*ml2 + x1 - 2*x2 + 2*x4 + 2*x6) + x1*x1*x2*((-2*Enu*Mn + x2)*(-2*Enu*Mn + x2))*x5*x6*(-(ml1*ml1) + ml2*ml2 + x1 - 2*x2 + 2*x4 + 2*x6) - 2*Mn*x1*x2*(-(Enu*Enu*Mn*x1) + Enu*x1*x2 + Mn*(x2*x2))*x5*x6*(-(ml1*ml1) + ml2*ml2 + x1 - 2*x2 + 2*x4 + 2*x6) - x1*x1*((-2*Enu*Mn + x2)*(-2*Enu*Mn + x2))*(x5*x5)*x6*(-(ml1*ml1) + ml2*ml2 + x1 - 2*x2 + 2*x4 + 2*x6) - 2*Mn*x1*(Enu*Enu*Mn*x1 - Enu*x1*x2 - Mn*(x2*x2))*(x5*x5)*x6*(-(ml1*ml1) + ml2*ml2 + x1 - 2*x2 + 2*x4 + 2*x6)) + V2*(-2*(ml2*ml2)*Mn*(x2*x2*x2)*(-(Enu*Enu*Mn*x1) + Enu*x1*x2 + Mn*(x2*x2))*(-(ml1*ml1) + ml2*ml2 - x1 + 2*x2 - 2*x3 - 2*x5) - 2*Mn*(x2*x2*x2)*(-(Enu*Enu*Mn*x1) + Enu*x1*x2 + Mn*(x2*x2))*x3*(-(ml1*ml1) + ml2*ml2 - x1 + 2*x2 - 2*x3 - 2*x5) + 2*(ml2*ml2)*Mn*(x2*x2)*(-(Enu*Enu*Mn*x1) + Enu*x1*x2 + Mn*(x2*x2))*(-(ml1*ml1) + ml2*ml2 - x1 + 2*x2 - 2*x3 - 2*x5)*x5 - x1*x1*(x2*x2)*((-2*Enu*Mn + x2)*(-2*Enu*Mn + x2))*x5*(ml1*ml1 - ml2*ml2 + x1 - 2*x2 + 2*x3 + 2*x5) + 3*Mn*x1*(x2*x2)*(-(Enu*Enu*Mn*x1) + Enu*x1*x2 + Mn*(x2*x2))*x5*(ml1*ml1 - ml2*ml2 + x1 - 2*x2 + 2*x3 + 2*x5) + 2*(x1*x1)*x2*((-2*Enu*Mn + x2)*(-2*Enu*Mn + x2))*(x5*x5)*(ml1*ml1 - ml2*ml2 + x1 - 2*x2 + 2*x3 + 2*x5) - 4*Mn*x1*x2*(-(Enu*Enu*Mn*x1) + Enu*x1*x2 + Mn*(x2*x2))*(x5*x5)*(ml1*ml1 - ml2*ml2 + x1 - 2*x2 + 2*x3 + 2*x5) - x1*x1*((-2*Enu*Mn + x2)*(-2*Enu*Mn + x2))*(x5*x5*x5)*(ml1*ml1 - ml2*ml2 + x1 - 2*x2 + 2*x3 + 2*x5) - 2*Mn*x1*(Enu*Enu*Mn*x1 - Enu*x1*x2 - Mn*(x2*x2))*(x5*x5*x5)*(ml1*ml1 - ml2*ml2 + x1 - 2*x2 + 2*x3 + 2*x5) + 4*ml1*(ml2*ml2*ml2)*Mn*(x2*x2)*(-(Enu*Enu*Mn*x1) + Enu*x1*x2 + Mn*(x2*x2))*(x2 - x5 - x6) - 4*ml1*ml2*Mn*x1*(x2*x2)*(-(Enu*Enu*Mn*x1) + Enu*x1*x2 + Mn*(x2*x2))*(x2 - x5 - x6) - 4*ml1*ml2*Mn*(x2*x2)*(-(Enu*Enu*Mn*x1) + Enu*x1*x2 + Mn*(x2*x2))*x3*(x2 - x5 - x6) - 2*ml1*ml2*(x1*x1)*x2*((-2*Enu*Mn + x2)*(-2*Enu*Mn + x2))*x5*(x2 - x5 - x6) + 4*ml1*ml2*Mn*x1*x2*(-(Enu*Enu*Mn*x1) + Enu*x1*x2 + Mn*(x2*x2))*x5*(x2 - x5 - x6) + 2*ml1*ml2*(x1*x1)*((-2*Enu*Mn + x2)*(-2*Enu*Mn + x2))*(x5*x5)*(x2 - x5 - x6) + 4*ml1*ml2*Mn*x1*(Enu*Enu*Mn*x1 - Enu*x1*x2 - Mn*(x2*x2))*(x5*x5)*(x2 - x5 - x6) - 4*(ml2*ml2)*Mn*(x2*x2)*(-(Enu*Enu*Mn*x1) + Enu*x1*x2 + Mn*(x2*x2))*(-x1 + x2 - x3 - x4)*x6 - 4*Mn*(x2*x2)*(-(Enu*Enu*Mn*x1) + Enu*x1*x2 + Mn*(x2*x2))*x3*(-x1 + x2 - x3 - x4)*x6 - 2*(x1*x1)*x2*((-2*Enu*Mn + x2)*(-2*Enu*Mn + x2))*(x1 - x2 + x3 + x4)*x5*x6 + 4*Mn*x1*x2*(-(Enu*Enu*Mn*x1) + Enu*x1*x2 + Mn*(x2*x2))*(x1 - x2 + x3 + x4)*x5*x6 + 2*(x1*x1)*((-2*Enu*Mn + x2)*(-2*Enu*Mn + x2))*(x1 - x2 + x3 + x4)*(x5*x5)*x6 + 4*Mn*x1*(Enu*Enu*Mn*x1 - Enu*x1*x2 - Mn*(x2*x2))*(x1 - x2 + x3 + x4)*(x5*x5)*x6 + x1*x1*x1*((-2*Enu*Mn + x2)*(-2*Enu*Mn + x2))*x5*(x2 - x5 - x6)*x6 + 2*Mn*(x1*x1)*(Enu*Enu*Mn*x1 - Enu*x1*x2 - Mn*(x2*x2))*x5*(x2 - x5 - x6)*x6 + 2*(x1*x1)*((-2*Enu*Mn + x2)*(-2*Enu*Mn + x2))*x3*x5*(x2 - x5 - x6)*x6 + 4*Mn*x1*(Enu*Enu*Mn*x1 - Enu*x1*x2 - Mn*(x2*x2))*x3*x5*(x2 - x5 - x6)*x6 - 2*(ml2*ml2)*Mn*(x2*x2)*(-(Enu*Enu*Mn*x1) + Enu*x1*x2 + Mn*(x2*x2))*x6*(-(ml1*ml1) + ml2*ml2 + x1 - 2*x2 + 2*x4 + 2*x6) + Mn*x1*(x2*x2)*(-(Enu*Enu*Mn*x1) + Enu*x1*x2 + Mn*(x2*x2))*x6*(-(ml1*ml1) + ml2*ml2 + x1 - 2*x2 + 2*x4 + 2*x6) + x1*x1*x2*((-2*Enu*Mn + x2)*(-2*Enu*Mn + x2))*x5*x6*(-(ml1*ml1) + ml2*ml2 + x1 - 2*x2 + 2*x4 + 2*x6) - 2*Mn*x1*x2*(-(Enu*Enu*Mn*x1) + Enu*x1*x2 + Mn*(x2*x2))*x5*x6*(-(ml1*ml1) + ml2*ml2 + x1 - 2*x2 + 2*x4 + 2*x6) - x1*x1*((-2*Enu*Mn + x2)*(-2*Enu*Mn + x2))*(x5*x5)*x6*(-(ml1*ml1) + ml2*ml2 + x1 - 2*x2 + 2*x4 + 2*x6) - 2*Mn*x1*(Enu*Enu*Mn*x1 - Enu*x1*x2 - Mn*(x2*x2))*(x5*x5)*x6*(-(ml1*ml1) + ml2*ml2 + x1 - 2*x2 + 2*x4 + 2*x6)) + 2*VA*(-2*(ml2*ml2)*Mn*(x2*x2*x2)*(-(Enu*Enu*Mn*x1) + Enu*x1*x2 + Mn*(x2*x2))*(-(ml1*ml1) + ml2*ml2 - x1 + 2*x2 - 2*x3 - 2*x5) - 2*Mn*(x2*x2*x2)*(-(Enu*Enu*Mn*x1) + Enu*x1*x2 + Mn*(x2*x2))*x3*(-(ml1*ml1) + ml2*ml2 - x1 + 2*x2 - 2*x3 - 2*x5) + 2*(ml2*ml2)*Mn*(x2*x2)*(-(Enu*Enu*Mn*x1) + Enu*x1*x2 + Mn*(x2*x2))*(-(ml1*ml1) + ml2*ml2 - x1 + 2*x2 - 2*x3 - 2*x5)*x5 - x1*x1*(x2*x2)*((-2*Enu*Mn + x2)*(-2*Enu*Mn + x2))*x5*(ml1*ml1 - ml2*ml2 + x1 - 2*x2 + 2*x3 + 2*x5) + 3*Mn*x1*(x2*x2)*(-(Enu*Enu*Mn*x1) + Enu*x1*x2 + Mn*(x2*x2))*x5*(ml1*ml1 - ml2*ml2 + x1 - 2*x2 + 2*x3 + 2*x5) + 2*(x1*x1)*x2*((-2*Enu*Mn + x2)*(-2*Enu*Mn + x2))*(x5*x5)*(ml1*ml1 - ml2*ml2 + x1 - 2*x2 + 2*x3 + 2*x5) - 4*Mn*x1*x2*(-(Enu*Enu*Mn*x1) + Enu*x1*x2 + Mn*(x2*x2))*(x5*x5)*(ml1*ml1 - ml2*ml2 + x1 - 2*x2 + 2*x3 + 2*x5) - x1*x1*((-2*Enu*Mn + x2)*(-2*Enu*Mn + x2))*(x5*x5*x5)*(ml1*ml1 - ml2*ml2 + x1 - 2*x2 + 2*x3 + 2*x5) - 2*Mn*x1*(Enu*Enu*Mn*x1 - Enu*x1*x2 - Mn*(x2*x2))*(x5*x5*x5)*(ml1*ml1 - ml2*ml2 + x1 - 2*x2 + 2*x3 + 2*x5) + 4*(ml2*ml2)*Mn*(x2*x2)*(-(Enu*Enu*Mn*x1) + Enu*x1*x2 + Mn*(x2*x2))*(-x1 + x2 - x3 - x4)*x6 + 4*Mn*(x2*x2)*(-(Enu*Enu*Mn*x1) + Enu*x1*x2 + Mn*(x2*x2))*x3*(-x1 + x2 - x3 - x4)*x6 + 2*(x1*x1)*x2*((-2*Enu*Mn + x2)*(-2*Enu*Mn + x2))*(x1 - x2 + x3 + x4)*x5*x6 - 4*Mn*x1*x2*(-(Enu*Enu*Mn*x1) + Enu*x1*x2 + Mn*(x2*x2))*(x1 - x2 + x3 + x4)*x5*x6 - 2*(x1*x1)*((-2*Enu*Mn + x2)*(-2*Enu*Mn + x2))*(x1 - x2 + x3 + x4)*(x5*x5)*x6 - 4*Mn*x1*(Enu*Enu*Mn*x1 - Enu*x1*x2 - Mn*(x2*x2))*(x1 - x2 + x3 + x4)*(x5*x5)*x6 - x1*x1*x1*((-2*Enu*Mn + x2)*(-2*Enu*Mn + x2))*x5*(x2 - x5 - x6)*x6 - 2*Mn*(x1*x1)*(Enu*Enu*Mn*x1 - Enu*x1*x2 - Mn*(x2*x2))*x5*(x2 - x5 - x6)*x6 - 2*(x1*x1)*((-2*Enu*Mn + x2)*(-2*Enu*Mn + x2))*x3*x5*(x2 - x5 - x6)*x6 - 4*Mn*x1*(Enu*Enu*Mn*x1 - Enu*x1*x2 - Mn*(x2*x2))*x3*x5*(x2 - x5 - x6)*x6 + Mn*x1*(x2*x2)*(Enu*Enu*Mn*x1 - Enu*x1*x2 - Mn*(x2*x2))*x6*(-(ml1*ml1) + ml2*ml2 + x1 - 2*x2 + 2*x4 + 2*x6) + 2*(ml2*ml2)*Mn*(x2*x2)*(-(Enu*Enu*Mn*x1) + Enu*x1*x2 + Mn*(x2*x2))*x6*(-(ml1*ml1) + ml2*ml2 + x1 - 2*x2 + 2*x4 + 2*x6) - x1*x1*x2*((-2*Enu*Mn + x2)*(-2*Enu*Mn + x2))*x5*x6*(-(ml1*ml1) + ml2*ml2 + x1 - 2*x2 + 2*x4 + 2*x6) + 2*Mn*x1*x2*(-(Enu*Enu*Mn*x1) + Enu*x1*x2 + Mn*(x2*x2))*x5*x6*(-(ml1*ml1) + ml2*ml2 + x1 - 2*x2 + 2*x4 + 2*x6) + x1*x1*((-2*Enu*Mn + x2)*(-2*Enu*Mn + x2))*(x5*x5)*x6*(-(ml1*ml1) + ml2*ml2 + x1 - 2*x2 + 2*x4 + 2*x6) + 2*Mn*x1*(Enu*Enu*Mn*x1 - Enu*x1*x2 - Mn*(x2*x2))*(x5*x5)*x6*(-(ml1*ml1) + ml2*ml2 + x1 - 2*x2 + 2*x4 + 2*x6))) + Diag11*((x1 + 2*x3)*(x1 + 2*x3))*(A2*(-4*(ml1*ml1)*Mn*(x2*x2)*(-(Enu*Enu*Mn*x1) + Enu*x1*x2 + Mn*(x2*x2))*(-x1 + x2 - x3 - x4)*x5 - 4*Mn*(x2*x2)*(-(Enu*Enu*Mn*x1) + Enu*x1*x2 + Mn*(x2*x2))*(-x1 + x2 - x3 - x4)*x4*x5 - 2*(ml1*ml1)*Mn*(x2*x2)*(-(Enu*Enu*Mn*x1) + Enu*x1*x2 + Mn*(x2*x2))*x5*(ml1*ml1 - ml2*ml2 + x1 - 2*x2 + 2*x3 + 2*x5) + Mn*x1*(x2*x2)*(-(Enu*Enu*Mn*x1) + Enu*x1*x2 + Mn*(x2*x2))*x5*(ml1*ml1 - ml2*ml2 + x1 - 2*x2 + 2*x3 + 2*x5) - 2*(ml1*ml1)*Mn*(x2*x2*x2)*(-(Enu*Enu*Mn*x1) + Enu*x1*x2 + Mn*(x2*x2))*(ml1*ml1 - ml2*ml2 - x1 + 2*x2 - 2*x4 - 2*x6) - 2*Mn*(x2*x2*x2)*(-(Enu*Enu*Mn*x1) + Enu*x1*x2 + Mn*(x2*x2))*x4*(ml1*ml1 - ml2*ml2 - x1 + 2*x2 - 2*x4 - 2*x6) - 4*(ml1*ml1*ml1)*ml2*Mn*(x2*x2)*(-(Enu*Enu*Mn*x1) + Enu*x1*x2 + Mn*(x2*x2))*(x2 - x5 - x6) + 4*ml1*ml2*Mn*x1*(x2*x2)*(-(Enu*Enu*Mn*x1) + Enu*x1*x2 + Mn*(x2*x2))*(x2 - x5 - x6) + 4*ml1*ml2*Mn*(x2*x2)*(-(Enu*Enu*Mn*x1) + Enu*x1*x2 + Mn*(x2*x2))*x4*(x2 - x5 - x6) - 2*(x1*x1)*x2*((-2*Enu*Mn + x2)*(-2*Enu*Mn + x2))*(x1 - x2 + x3 + x4)*x5*x6 + 4*Mn*x1*x2*(-(Enu*Enu*Mn*x1) + Enu*x1*x2 + Mn*(x2*x2))*(x1 - x2 + x3 + x4)*x5*x6 + x1*x1*x2*((-2*Enu*Mn + x2)*(-2*Enu*Mn + x2))*x5*(ml1*ml1 - ml2*ml2 + x1 - 2*x2 + 2*x3 + 2*x5)*x6 - 2*Mn*x1*x2*(-(Enu*Enu*Mn*x1) + Enu*x1*x2 + Mn*(x2*x2))*x5*(ml1*ml1 - ml2*ml2 + x1 - 2*x2 + 2*x3 + 2*x5)*x6 + 2*(ml1*ml1)*Mn*(x2*x2)*(-(Enu*Enu*Mn*x1) + Enu*x1*x2 + Mn*(x2*x2))*(ml1*ml1 - ml2*ml2 - x1 + 2*x2 - 2*x4 - 2*x6)*x6 + 2*ml1*ml2*(x1*x1)*x2*((-2*Enu*Mn + x2)*(-2*Enu*Mn + x2))*(x2 - x5 - x6)*x6 - 4*ml1*ml2*Mn*x1*x2*(-(Enu*Enu*Mn*x1) + Enu*x1*x2 + Mn*(x2*x2))*(x2 - x5 - x6)*x6 + x1*x1*x1*((-2*Enu*Mn + x2)*(-2*Enu*Mn + x2))*x5*(x2 - x5 - x6)*x6 + 2*Mn*(x1*x1)*(Enu*Enu*Mn*x1 - Enu*x1*x2 - Mn*(x2*x2))*x5*(x2 - x5 - x6)*x6 + 2*(x1*x1)*((-2*Enu*Mn + x2)*(-2*Enu*Mn + x2))*x4*x5*(x2 - x5 - x6)*x6 + 4*Mn*x1*(Enu*Enu*Mn*x1 - Enu*x1*x2 - Mn*(x2*x2))*x4*x5*(x2 - x5 - x6)*x6 + 2*(x1*x1)*((-2*Enu*Mn + x2)*(-2*Enu*Mn + x2))*(x1 - x2 + x3 + x4)*x5*(x6*x6) + 4*Mn*x1*(Enu*Enu*Mn*x1 - Enu*x1*x2 - Mn*(x2*x2))*(x1 - x2 + x3 + x4)*x5*(x6*x6) - x1*x1*((-2*Enu*Mn + x2)*(-2*Enu*Mn + x2))*x5*(ml1*ml1 - ml2*ml2 + x1 - 2*x2 + 2*x3 + 2*x5)*(x6*x6) - 2*Mn*x1*(Enu*Enu*Mn*x1 - Enu*x1*x2 - Mn*(x2*x2))*x5*(ml1*ml1 - ml2*ml2 + x1 - 2*x2 + 2*x3 + 2*x5)*(x6*x6) - 2*ml1*ml2*(x1*x1)*((-2*Enu*Mn + x2)*(-2*Enu*Mn + x2))*(x2 - x5 - x6)*(x6*x6) - 4*ml1*ml2*Mn*x1*(Enu*Enu*Mn*x1 - Enu*x1*x2 - Mn*(x2*x2))*(x2 - x5 - x6)*(x6*x6) - x1*x1*(x2*x2)*((-2*Enu*Mn + x2)*(-2*Enu*Mn + x2))*x6*(-(ml1*ml1) + ml2*ml2 + x1 - 2*x2 + 2*x4 + 2*x6) + 3*Mn*x1*(x2*x2)*(-(Enu*Enu*Mn*x1) + Enu*x1*x2 + Mn*(x2*x2))*x6*(-(ml1*ml1) + ml2*ml2 + x1 - 2*x2 + 2*x4 + 2*x6) + 2*(x1*x1)*x2*((-2*Enu*Mn + x2)*(-2*Enu*Mn + x2))*(x6*x6)*(-(ml1*ml1) + ml2*ml2 + x1 - 2*x2 + 2*x4 + 2*x6) - 4*Mn*x1*x2*(-(Enu*Enu*Mn*x1) + Enu*x1*x2 + Mn*(x2*x2))*(x6*x6)*(-(ml1*ml1) + ml2*ml2 + x1 - 2*x2 + 2*x4 + 2*x6) - x1*x1*((-2*Enu*Mn + x2)*(-2*Enu*Mn + x2))*(x6*x6*x6)*(-(ml1*ml1) + ml2*ml2 + x1 - 2*x2 + 2*x4 + 2*x6) - 2*Mn*x1*(Enu*Enu*Mn*x1 - Enu*x1*x2 - Mn*(x2*x2))*(x6*x6*x6)*(-(ml1*ml1) + ml2*ml2 + x1 - 2*x2 + 2*x4 + 2*x6)) + V2*(-4*(ml1*ml1)*Mn*(x2*x2)*(-(Enu*Enu*Mn*x1) + Enu*x1*x2 + Mn*(x2*x2))*(-x1 + x2 - x3 - x4)*x5 - 4*Mn*(x2*x2)*(-(Enu*Enu*Mn*x1) + Enu*x1*x2 + Mn*(x2*x2))*(-x1 + x2 - x3 - x4)*x4*x5 - 2*(ml1*ml1)*Mn*(x2*x2)*(-(Enu*Enu*Mn*x1) + Enu*x1*x2 + Mn*(x2*x2))*x5*(ml1*ml1 - ml2*ml2 + x1 - 2*x2 + 2*x3 + 2*x5) + Mn*x1*(x2*x2)*(-(Enu*Enu*Mn*x1) + Enu*x1*x2 + Mn*(x2*x2))*x5*(ml1*ml1 - ml2*ml2 + x1 - 2*x2 + 2*x3 + 2*x5) - 2*(ml1*ml1)*Mn*(x2*x2*x2)*(-(Enu*Enu*Mn*x1) + Enu*x1*x2 + Mn*(x2*x2))*(ml1*ml1 - ml2*ml2 - x1 + 2*x2 - 2*x4 - 2*x6) - 2*Mn*(x2*x2*x2)*(-(Enu*Enu*Mn*x1) + Enu*x1*x2 + Mn*(x2*x2))*x4*(ml1*ml1 - ml2*ml2 - x1 + 2*x2 - 2*x4 - 2*x6) + 4*(ml1*ml1*ml1)*ml2*Mn*(x2*x2)*(-(Enu*Enu*Mn*x1) + Enu*x1*x2 + Mn*(x2*x2))*(x2 - x5 - x6) - 4*ml1*ml2*Mn*x1*(x2*x2)*(-(Enu*Enu*Mn*x1) + Enu*x1*x2 + Mn*(x2*x2))*(x2 - x5 - x6) - 4*ml1*ml2*Mn*(x2*x2)*(-(Enu*Enu*Mn*x1) + Enu*x1*x2 + Mn*(x2*x2))*x4*(x2 - x5 - x6) - 2*(x1*x1)*x2*((-2*Enu*Mn + x2)*(-2*Enu*Mn + x2))*(x1 - x2 + x3 + x4)*x5*x6 + 4*Mn*x1*x2*(-(Enu*Enu*Mn*x1) + Enu*x1*x2 + Mn*(x2*x2))*(x1 - x2 + x3 + x4)*x5*x6 + x1*x1*x2*((-2*Enu*Mn + x2)*(-2*Enu*Mn + x2))*x5*(ml1*ml1 - ml2*ml2 + x1 - 2*x2 + 2*x3 + 2*x5)*x6 - 2*Mn*x1*x2*(-(Enu*Enu*Mn*x1) + Enu*x1*x2 + Mn*(x2*x2))*x5*(ml1*ml1 - ml2*ml2 + x1 - 2*x2 + 2*x3 + 2*x5)*x6 + 2*(ml1*ml1)*Mn*(x2*x2)*(-(Enu*Enu*Mn*x1) + Enu*x1*x2 + Mn*(x2*x2))*(ml1*ml1 - ml2*ml2 - x1 + 2*x2 - 2*x4 - 2*x6)*x6 - 2*ml1*ml2*(x1*x1)*x2*((-2*Enu*Mn + x2)*(-2*Enu*Mn + x2))*(x2 - x5 - x6)*x6 + 4*ml1*ml2*Mn*x1*x2*(-(Enu*Enu*Mn*x1) + Enu*x1*x2 + Mn*(x2*x2))*(x2 - x5 - x6)*x6 + x1*x1*x1*((-2*Enu*Mn + x2)*(-2*Enu*Mn + x2))*x5*(x2 - x5 - x6)*x6 + 2*Mn*(x1*x1)*(Enu*Enu*Mn*x1 - Enu*x1*x2 - Mn*(x2*x2))*x5*(x2 - x5 - x6)*x6 + 2*(x1*x1)*((-2*Enu*Mn + x2)*(-2*Enu*Mn + x2))*x4*x5*(x2 - x5 - x6)*x6 + 4*Mn*x1*(Enu*Enu*Mn*x1 - Enu*x1*x2 - Mn*(x2*x2))*x4*x5*(x2 - x5 - x6)*x6 + 2*(x1*x1)*((-2*Enu*Mn + x2)*(-2*Enu*Mn + x2))*(x1 - x2 + x3 + x4)*x5*(x6*x6) + 4*Mn*x1*(Enu*Enu*Mn*x1 - Enu*x1*x2 - Mn*(x2*x2))*(x1 - x2 + x3 + x4)*x5*(x6*x6) - x1*x1*((-2*Enu*Mn + x2)*(-2*Enu*Mn + x2))*x5*(ml1*ml1 - ml2*ml2 + x1 - 2*x2 + 2*x3 + 2*x5)*(x6*x6) - 2*Mn*x1*(Enu*Enu*Mn*x1 - Enu*x1*x2 - Mn*(x2*x2))*x5*(ml1*ml1 - ml2*ml2 + x1 - 2*x2 + 2*x3 + 2*x5)*(x6*x6) + 2*ml1*ml2*(x1*x1)*((-2*Enu*Mn + x2)*(-2*Enu*Mn + x2))*(x2 - x5 - x6)*(x6*x6) + 4*ml1*ml2*Mn*x1*(Enu*Enu*Mn*x1 - Enu*x1*x2 - Mn*(x2*x2))*(x2 - x5 - x6)*(x6*x6) - x1*x1*(x2*x2)*((-2*Enu*Mn + x2)*(-2*Enu*Mn + x2))*x6*(-(ml1*ml1) + ml2*ml2 + x1 - 2*x2 + 2*x4 + 2*x6) + 3*Mn*x1*(x2*x2)*(-(Enu*Enu*Mn*x1) + Enu*x1*x2 + Mn*(x2*x2))*x6*(-(ml1*ml1) + ml2*ml2 + x1 - 2*x2 + 2*x4 + 2*x6) + 2*(x1*x1)*x2*((-2*Enu*Mn + x2)*(-2*Enu*Mn + x2))*(x6*x6)*(-(ml1*ml1) + ml2*ml2 + x1 - 2*x2 + 2*x4 + 2*x6) - 4*Mn*x1*x2*(-(Enu*Enu*Mn*x1) + Enu*x1*x2 + Mn*(x2*x2))*(x6*x6)*(-(ml1*ml1) + ml2*ml2 + x1 - 2*x2 + 2*x4 + 2*x6) - x1*x1*((-2*Enu*Mn + x2)*(-2*Enu*Mn + x2))*(x6*x6*x6)*(-(ml1*ml1) + ml2*ml2 + x1 - 2*x2 + 2*x4 + 2*x6) - 2*Mn*x1*(Enu*Enu*Mn*x1 - Enu*x1*x2 - Mn*(x2*x2))*(x6*x6*x6)*(-(ml1*ml1) + ml2*ml2 + x1 - 2*x2 + 2*x4 + 2*x6)) + 2*VA*(-4*(ml1*ml1)*Mn*(x2*x2)*(-(Enu*Enu*Mn*x1) + Enu*x1*x2 + Mn*(x2*x2))*(-x1 + x2 - x3 - x4)*x5 - 4*Mn*(x2*x2)*(-(Enu*Enu*Mn*x1) + Enu*x1*x2 + Mn*(x2*x2))*(-x1 + x2 - x3 - x4)*x4*x5 - 2*(ml1*ml1)*Mn*(x2*x2)*(-(Enu*Enu*Mn*x1) + Enu*x1*x2 + Mn*(x2*x2))*x5*(ml1*ml1 - ml2*ml2 + x1 - 2*x2 + 2*x3 + 2*x5) + Mn*x1*(x2*x2)*(-(Enu*Enu*Mn*x1) + Enu*x1*x2 + Mn*(x2*x2))*x5*(ml1*ml1 - ml2*ml2 + x1 - 2*x2 + 2*x3 + 2*x5) + 2*(ml1*ml1)*Mn*(x2*x2*x2)*(-(Enu*Enu*Mn*x1) + Enu*x1*x2 + Mn*(x2*x2))*(ml1*ml1 - ml2*ml2 - x1 + 2*x2 - 2*x4 - 2*x6) + 2*Mn*(x2*x2*x2)*(-(Enu*Enu*Mn*x1) + Enu*x1*x2 + Mn*(x2*x2))*x4*(ml1*ml1 - ml2*ml2 - x1 + 2*x2 - 2*x4 - 2*x6) - 2*(x1*x1)*x2*((-2*Enu*Mn + x2)*(-2*Enu*Mn + x2))*(x1 - x2 + x3 + x4)*x5*x6 + 4*Mn*x1*x2*(-(Enu*Enu*Mn*x1) + Enu*x1*x2 + Mn*(x2*x2))*(x1 - x2 + x3 + x4)*x5*x6 + x1*x1*x2*((-2*Enu*Mn + x2)*(-2*Enu*Mn + x2))*x5*(ml1*ml1 - ml2*ml2 + x1 - 2*x2 + 2*x3 + 2*x5)*x6 - 2*Mn*x1*x2*(-(Enu*Enu*Mn*x1) + Enu*x1*x2 + Mn*(x2*x2))*x5*(ml1*ml1 - ml2*ml2 + x1 - 2*x2 + 2*x3 + 2*x5)*x6 - 2*(ml1*ml1)*Mn*(x2*x2)*(-(Enu*Enu*Mn*x1) + Enu*x1*x2 + Mn*(x2*x2))*(ml1*ml1 - ml2*ml2 - x1 + 2*x2 - 2*x4 - 2*x6)*x6 + x1*x1*x1*((-2*Enu*Mn + x2)*(-2*Enu*Mn + x2))*x5*(x2 - x5 - x6)*x6 + 2*Mn*(x1*x1)*(Enu*Enu*Mn*x1 - Enu*x1*x2 - Mn*(x2*x2))*x5*(x2 - x5 - x6)*x6 + 2*(x1*x1)*((-2*Enu*Mn + x2)*(-2*Enu*Mn + x2))*x4*x5*(x2 - x5 - x6)*x6 + 4*Mn*x1*(Enu*Enu*Mn*x1 - Enu*x1*x2 - Mn*(x2*x2))*x4*x5*(x2 - x5 - x6)*x6 + 2*(x1*x1)*((-2*Enu*Mn + x2)*(-2*Enu*Mn + x2))*(x1 - x2 + x3 + x4)*x5*(x6*x6) + 4*Mn*x1*(Enu*Enu*Mn*x1 - Enu*x1*x2 - Mn*(x2*x2))*(x1 - x2 + x3 + x4)*x5*(x6*x6) - x1*x1*((-2*Enu*Mn + x2)*(-2*Enu*Mn + x2))*x5*(ml1*ml1 - ml2*ml2 + x1 - 2*x2 + 2*x3 + 2*x5)*(x6*x6) - 2*Mn*x1*(Enu*Enu*Mn*x1 - Enu*x1*x2 - Mn*(x2*x2))*x5*(ml1*ml1 - ml2*ml2 + x1 - 2*x2 + 2*x3 + 2*x5)*(x6*x6) + x1*x1*(x2*x2)*((-2*Enu*Mn + x2)*(-2*Enu*Mn + x2))*x6*(-(ml1*ml1) + ml2*ml2 + x1 - 2*x2 + 2*x4 + 2*x6) - 3*Mn*x1*(x2*x2)*(-(Enu*Enu*Mn*x1) + Enu*x1*x2 + Mn*(x2*x2))*x6*(-(ml1*ml1) + ml2*ml2 + x1 - 2*x2 + 2*x4 + 2*x6) - 2*(x1*x1)*x2*((-2*Enu*Mn + x2)*(-2*Enu*Mn + x2))*(x6*x6)*(-(ml1*ml1) + ml2*ml2 + x1 - 2*x2 + 2*x4 + 2*x6) + 4*Mn*x1*x2*(-(Enu*Enu*Mn*x1) + Enu*x1*x2 + Mn*(x2*x2))*(x6*x6)*(-(ml1*ml1) + ml2*ml2 + x1 - 2*x2 + 2*x4 + 2*x6) + x1*x1*((-2*Enu*Mn + x2)*(-2*Enu*Mn + x2))*(x6*x6*x6)*(-(ml1*ml1) + ml2*ml2 + x1 - 2*x2 + 2*x4 + 2*x6) + 2*Mn*x1*(Enu*Enu*Mn*x1 - Enu*x1*x2 - Mn*(x2*x2))*(x6*x6*x6)*(-(ml1*ml1) + ml2*ml2 + x1 - 2*x2 + 2*x4 + 2*x6))) + Diag12*(x1 + 2*x3)*(x1 + 2*x4)*(2*(Enu*Enu)*(Mn*Mn)*x1*(-2*V2*x1*(x2*x2*x2*x2) + 4*V2*(x2*x2*x2*x2*x2) + V2*x1*(x2*x2*x2)*x3 + 2*VA*x1*(x2*x2*x2)*x3 - 6*V2*(x2*x2*x2*x2)*x3 - 4*VA*(x2*x2*x2*x2)*x3 + 2*V2*(x2*x2*x2)*(x3*x3) + 4*VA*(x2*x2*x2)*(x3*x3) + V2*x1*(x2*x2*x2)*x4 - 2*VA*x1*(x2*x2*x2)*x4 - 6*V2*(x2*x2*x2*x2)*x4 + 4*VA*(x2*x2*x2*x2)*x4 + 4*V2*(x2*x2*x2)*x3*x4 + 2*V2*(x2*x2*x2)*(x4*x4) - 4*VA*(x2*x2*x2)*(x4*x4) + 4*V2*(x1*x1)*(x2*x2)*x5 + 8*VA*(x1*x1)*(x2*x2)*x5 - 6*V2*x1*(x2*x2*x2)*x5 - 12*VA*x1*(x2*x2*x2)*x5 - 8*V2*(x2*x2*x2*x2)*x5 - 8*VA*(x2*x2*x2*x2)*x5 + 8*V2*x1*(x2*x2)*x3*x5 + 16*VA*x1*(x2*x2)*x3*x5 + 6*V2*(x2*x2*x2)*x3*x5 + 12*VA*(x2*x2*x2)*x3*x5 + 8*V2*x1*(x2*x2)*x4*x5 + 16*VA*x1*(x2*x2)*x4*x5 + 6*V2*(x2*x2*x2)*x4*x5 - 4*VA*(x2*x2*x2)*x4*x5 + 2*V2*(x2*x2)*x3*x4*x5 + 4*VA*(x2*x2)*x3*x4*x5 - 2*V2*(x2*x2)*(x4*x4)*x5 + 4*VA*(x2*x2)*(x4*x4)*x5 - 3*V2*(x1*x1)*x2*(x5*x5) - 6*VA*(x1*x1)*x2*(x5*x5) + 12*V2*x1*(x2*x2)*(x5*x5) + 24*VA*x1*(x2*x2)*(x5*x5) + 8*V2*(x2*x2*x2)*(x5*x5) + 16*VA*(x2*x2*x2)*(x5*x5) - 6*V2*x1*x2*x3*(x5*x5) - 12*VA*x1*x2*x3*(x5*x5) - 4*V2*(x2*x2)*x3*(x5*x5) - 8*VA*(x2*x2)*x3*(x5*x5) - 12*V2*x1*x2*x4*(x5*x5) - 24*VA*x1*x2*x4*(x5*x5) - 6*V2*x1*x2*(x5*x5*x5) - 12*VA*x1*x2*(x5*x5*x5) - 4*V2*(x2*x2)*(x5*x5*x5) - 8*VA*(x2*x2)*(x5*x5*x5) + 6*V2*x1*x4*(x5*x5*x5) + 12*VA*x1*x4*(x5*x5*x5) + 4*V2*(x1*x1)*(x2*x2)*x6 - 8*VA*(x1*x1)*(x2*x2)*x6 - 6*V2*x1*(x2*x2*x2)*x6 + 12*VA*x1*(x2*x2*x2)*x6 - 8*V2*(x2*x2*x2*x2)*x6 + 8*VA*(x2*x2*x2*x2)*x6 + 8*V2*x1*(x2*x2)*x3*x6 - 16*VA*x1*(x2*x2)*x3*x6 + 6*V2*(x2*x2*x2)*x3*x6 + 4*VA*(x2*x2*x2)*x3*x6 - 2*V2*(x2*x2)*(x3*x3)*x6 - 4*VA*(x2*x2)*(x3*x3)*x6 + 8*V2*x1*(x2*x2)*x4*x6 - 16*VA*x1*(x2*x2)*x4*x6 + 6*V2*(x2*x2*x2)*x4*x6 - 12*VA*(x2*x2*x2)*x4*x6 + 2*V2*(x2*x2)*x3*x4*x6 - 4*VA*(x2*x2)*x3*x4*x6 + 16*V2*x1*(x2*x2)*x5*x6 + 8*V2*(x2*x2*x2)*x5*x6 - 6*V2*x1*x2*x3*x5*x6 - 12*VA*x1*x2*x3*x5*x6 - 4*V2*(x2*x2)*x3*x5*x6 - 8*VA*(x2*x2)*x3*x5*x6 - 6*V2*x1*x2*x4*x5*x6 + 12*VA*x1*x2*x4*x5*x6 - 4*V2*(x2*x2)*x4*x5*x6 + 8*VA*(x2*x2)*x4*x5*x6 - 18*V2*x1*x2*(x5*x5)*x6 - 36*VA*x1*x2*(x5*x5)*x6 - 4*V2*(x2*x2)*(x5*x5)*x6 - 8*VA*(x2*x2)*(x5*x5)*x6 + 6*V2*x1*x3*(x5*x5)*x6 + 12*VA*x1*x3*(x5*x5)*x6 + 12*V2*x1*(x5*x5*x5)*x6 + 24*VA*x1*(x5*x5*x5)*x6 - 3*V2*(x1*x1)*x2*(x6*x6) + 6*VA*(x1*x1)*x2*(x6*x6) + 12*V2*x1*(x2*x2)*(x6*x6) - 24*VA*x1*(x2*x2)*(x6*x6) + 8*V2*(x2*x2*x2)*(x6*x6) - 16*VA*(x2*x2*x2)*(x6*x6) - 12*V2*x1*x2*x3*(x6*x6) + 24*VA*x1*x2*x3*(x6*x6) - 6*V2*x1*x2*x4*(x6*x6) + 12*VA*x1*x2*x4*(x6*x6) - 4*V2*(x2*x2)*x4*(x6*x6) + 8*VA*(x2*x2)*x4*(x6*x6) - 18*V2*x1*x2*x5*(x6*x6) + 36*VA*x1*x2*x5*(x6*x6) - 4*V2*(x2*x2)*x5*(x6*x6) + 8*VA*(x2*x2)*x5*(x6*x6) + 6*V2*x1*x4*x5*(x6*x6) - 12*VA*x1*x4*x5*(x6*x6) - 6*V2*x1*x2*(x6*x6*x6) + 12*VA*x1*x2*(x6*x6*x6) - 4*V2*(x2*x2)*(x6*x6*x6) + 8*VA*(x2*x2)*(x6*x6*x6) + 6*V2*x1*x3*(x6*x6*x6) - 12*VA*x1*x3*(x6*x6*x6) + 12*V2*x1*x5*(x6*x6*x6) - 24*VA*x1*x5*(x6*x6*x6) + 2*(ml1*ml1*ml1)*ml2*V2*(x2*x2)*(-x2 + x5 + x6) + ml2*ml2*ml2*ml2*(x2*x2)*(2*VA*(x2 - x5 - x6) + V2*(-x5 + x6)) + ml1*ml1*ml1*ml1*(x2*x2)*(V2*(x5 - x6) + 2*VA*(-x2 + x5 + x6)) - 2*ml1*ml2*V2*(ml2*ml2*(x2*x2)*(x2 - x5 - x6) + x1*(x2*x2*x2 - 6*(x2*x2)*(x5 + x6) - 6*x5*x6*(x5 + x6) + 3*x2*(x5*x5 + 4*x5*x6 + x6*x6)) + x2*x2*(4*(x2*x2) + (x5 + x6)*(x3 + x4 + 2*(x5 + x6)) - x2*(3*x3 + 3*x4 + 4*(x5 + x6)))) - ml2*ml2*(V2*(-2*(x2*x2*x2*x2) + x2*x2*x2*(x3 + x4 + 4*x5) + x2*x2*(-2*x5*(x3 - x4 + 2*x5) + x1*(3*x5 - x6)) + 6*x1*x5*(x5 - x6)*x6 + 3*x1*x2*(-(x5*x5) + x6*x6)) + 2*VA*(x2*x2*(-2*(x2*x2) - 2*(x3 + 2*x5)*(x5 + x6) + x2*(3*x3 + x4 + 6*x5 + 2*x6)) + x1*(x2*x2*x2 + 3*(x2*x2)*(x5 + x6) + 6*x5*x6*(x5 + x6) - 3*x2*(x5*x5 + 4*x5*x6 + x6*x6)))) + ml1*ml1*(V2*(2*(x2*x2*x2*x2) + 6*x1*x5*(x5 - x6)*x6 - x2*x2*x2*(x3 + x4 + 4*x6) + 3*x1*x2*(-(x5*x5) + x6*x6) + x2*x2*(x1*(x5 - 3*x6) + 2*x6*(-x3 + x4 + 2*x6))) + 2*VA*(x2*x2*(-2*(x2*x2) - 2*(x5 + x6)*(x4 + 2*x6) + x2*(x3 + 3*x4 + 2*x5 + 6*x6)) + x1*(x2*x2*x2 + 3*(x2*x2)*(x5 + x6) + 6*x5*x6*(x5 + x6) - 3*x2*(x5*x5 + 4*x5*x6 + x6*x6))))) - 2*Enu*Mn*x1*x2*(-2*V2*x1*(x2*x2*x2*x2) + 4*V2*(x2*x2*x2*x2*x2) + V2*x1*(x2*x2*x2)*x3 + 2*VA*x1*(x2*x2*x2)*x3 - 6*V2*(x2*x2*x2*x2)*x3 - 4*VA*(x2*x2*x2*x2)*x3 + 2*V2*(x2*x2*x2)*(x3*x3) + 4*VA*(x2*x2*x2)*(x3*x3) + V2*x1*(x2*x2*x2)*x4 - 2*VA*x1*(x2*x2*x2)*x4 - 6*V2*(x2*x2*x2*x2)*x4 + 4*VA*(x2*x2*x2*x2)*x4 + 4*V2*(x2*x2*x2)*x3*x4 + 2*V2*(x2*x2*x2)*(x4*x4) - 4*VA*(x2*x2*x2)*(x4*x4) + 4*V2*(x1*x1)*(x2*x2)*x5 + 8*VA*(x1*x1)*(x2*x2)*x5 - 6*V2*x1*(x2*x2*x2)*x5 - 12*VA*x1*(x2*x2*x2)*x5 - 8*V2*(x2*x2*x2*x2)*x5 - 8*VA*(x2*x2*x2*x2)*x5 + 8*V2*x1*(x2*x2)*x3*x5 + 16*VA*x1*(x2*x2)*x3*x5 + 6*V2*(x2*x2*x2)*x3*x5 + 12*VA*(x2*x2*x2)*x3*x5 + 8*V2*x1*(x2*x2)*x4*x5 + 16*VA*x1*(x2*x2)*x4*x5 + 6*V2*(x2*x2*x2)*x4*x5 - 4*VA*(x2*x2*x2)*x4*x5 + 2*V2*(x2*x2)*x3*x4*x5 + 4*VA*(x2*x2)*x3*x4*x5 - 2*V2*(x2*x2)*(x4*x4)*x5 + 4*VA*(x2*x2)*(x4*x4)*x5 - 3*V2*(x1*x1)*x2*(x5*x5) - 6*VA*(x1*x1)*x2*(x5*x5) + 12*V2*x1*(x2*x2)*(x5*x5) + 24*VA*x1*(x2*x2)*(x5*x5) + 8*V2*(x2*x2*x2)*(x5*x5) + 16*VA*(x2*x2*x2)*(x5*x5) - 6*V2*x1*x2*x3*(x5*x5) - 12*VA*x1*x2*x3*(x5*x5) - 4*V2*(x2*x2)*x3*(x5*x5) - 8*VA*(x2*x2)*x3*(x5*x5) - 12*V2*x1*x2*x4*(x5*x5) - 24*VA*x1*x2*x4*(x5*x5) - 6*V2*x1*x2*(x5*x5*x5) - 12*VA*x1*x2*(x5*x5*x5) - 4*V2*(x2*x2)*(x5*x5*x5) - 8*VA*(x2*x2)*(x5*x5*x5) + 6*V2*x1*x4*(x5*x5*x5) + 12*VA*x1*x4*(x5*x5*x5) + 4*V2*(x1*x1)*(x2*x2)*x6 - 8*VA*(x1*x1)*(x2*x2)*x6 - 6*V2*x1*(x2*x2*x2)*x6 + 12*VA*x1*(x2*x2*x2)*x6 - 8*V2*(x2*x2*x2*x2)*x6 + 8*VA*(x2*x2*x2*x2)*x6 + 8*V2*x1*(x2*x2)*x3*x6 - 16*VA*x1*(x2*x2)*x3*x6 + 6*V2*(x2*x2*x2)*x3*x6 + 4*VA*(x2*x2*x2)*x3*x6 - 2*V2*(x2*x2)*(x3*x3)*x6 - 4*VA*(x2*x2)*(x3*x3)*x6 + 8*V2*x1*(x2*x2)*x4*x6 - 16*VA*x1*(x2*x2)*x4*x6 + 6*V2*(x2*x2*x2)*x4*x6 - 12*VA*(x2*x2*x2)*x4*x6 + 2*V2*(x2*x2)*x3*x4*x6 - 4*VA*(x2*x2)*x3*x4*x6 + 16*V2*x1*(x2*x2)*x5*x6 + 8*V2*(x2*x2*x2)*x5*x6 - 6*V2*x1*x2*x3*x5*x6 - 12*VA*x1*x2*x3*x5*x6 - 4*V2*(x2*x2)*x3*x5*x6 - 8*VA*(x2*x2)*x3*x5*x6 - 6*V2*x1*x2*x4*x5*x6 + 12*VA*x1*x2*x4*x5*x6 - 4*V2*(x2*x2)*x4*x5*x6 + 8*VA*(x2*x2)*x4*x5*x6 - 18*V2*x1*x2*(x5*x5)*x6 - 36*VA*x1*x2*(x5*x5)*x6 - 4*V2*(x2*x2)*(x5*x5)*x6 - 8*VA*(x2*x2)*(x5*x5)*x6 + 6*V2*x1*x3*(x5*x5)*x6 + 12*VA*x1*x3*(x5*x5)*x6 + 12*V2*x1*(x5*x5*x5)*x6 + 24*VA*x1*(x5*x5*x5)*x6 - 3*V2*(x1*x1)*x2*(x6*x6) + 6*VA*(x1*x1)*x2*(x6*x6) + 12*V2*x1*(x2*x2)*(x6*x6) - 24*VA*x1*(x2*x2)*(x6*x6) + 8*V2*(x2*x2*x2)*(x6*x6) - 16*VA*(x2*x2*x2)*(x6*x6) - 12*V2*x1*x2*x3*(x6*x6) + 24*VA*x1*x2*x3*(x6*x6) - 6*V2*x1*x2*x4*(x6*x6) + 12*VA*x1*x2*x4*(x6*x6) - 4*V2*(x2*x2)*x4*(x6*x6) + 8*VA*(x2*x2)*x4*(x6*x6) - 18*V2*x1*x2*x5*(x6*x6) + 36*VA*x1*x2*x5*(x6*x6) - 4*V2*(x2*x2)*x5*(x6*x6) + 8*VA*(x2*x2)*x5*(x6*x6) + 6*V2*x1*x4*x5*(x6*x6) - 12*VA*x1*x4*x5*(x6*x6) - 6*V2*x1*x2*(x6*x6*x6) + 12*VA*x1*x2*(x6*x6*x6) - 4*V2*(x2*x2)*(x6*x6*x6) + 8*VA*(x2*x2)*(x6*x6*x6) + 6*V2*x1*x3*(x6*x6*x6) - 12*VA*x1*x3*(x6*x6*x6) + 12*V2*x1*x5*(x6*x6*x6) - 24*VA*x1*x5*(x6*x6*x6) + 2*(ml1*ml1*ml1)*ml2*V2*(x2*x2)*(-x2 + x5 + x6) + ml2*ml2*ml2*ml2*(x2*x2)*(2*VA*(x2 - x5 - x6) + V2*(-x5 + x6)) + ml1*ml1*ml1*ml1*(x2*x2)*(V2*(x5 - x6) + 2*VA*(-x2 + x5 + x6)) - 2*ml1*ml2*V2*(ml2*ml2*(x2*x2)*(x2 - x5 - x6) + x1*(x2*x2*x2 - 6*(x2*x2)*(x5 + x6) - 6*x5*x6*(x5 + x6) + 3*x2*(x5*x5 + 4*x5*x6 + x6*x6)) + x2*x2*(4*(x2*x2) + (x5 + x6)*(x3 + x4 + 2*(x5 + x6)) - x2*(3*x3 + 3*x4 + 4*(x5 + x6)))) - ml2*ml2*(V2*(-2*(x2*x2*x2*x2) + x2*x2*x2*(x3 + x4 + 4*x5) + x2*x2*(-2*x5*(x3 - x4 + 2*x5) + x1*(3*x5 - x6)) + 6*x1*x5*(x5 - x6)*x6 + 3*x1*x2*(-(x5*x5) + x6*x6)) + 2*VA*(x2*x2*(-2*(x2*x2) - 2*(x3 + 2*x5)*(x5 + x6) + x2*(3*x3 + x4 + 6*x5 + 2*x6)) + x1*(x2*x2*x2 + 3*(x2*x2)*(x5 + x6) + 6*x5*x6*(x5 + x6) - 3*x2*(x5*x5 + 4*x5*x6 + x6*x6)))) + ml1*ml1*(V2*(2*(x2*x2*x2*x2) + 6*x1*x5*(x5 - x6)*x6 - x2*x2*x2*(x3 + x4 + 4*x6) + 3*x1*x2*(-(x5*x5) + x6*x6) + x2*x2*(x1*(x5 - 3*x6) + 2*x6*(-x3 + x4 + 2*x6))) + 2*VA*(x2*x2*(-2*(x2*x2) - 2*(x5 + x6)*(x4 + 2*x6) + x2*(x3 + 3*x4 + 2*x5 + 6*x6)) + x1*(x2*x2*x2 + 3*(x2*x2)*(x5 + x6) + 6*x5*x6*(x5 + x6) - 3*x2*(x5*x5 + 4*x5*x6 + x6*x6))))) + x2*x2*(4*(Mn*Mn)*V2*x1*(x2*x2*x2*x2) - 8*(Mn*Mn)*V2*(x2*x2*x2*x2*x2) - 2*(Mn*Mn)*V2*x1*(x2*x2*x2)*x3 - 4*(Mn*Mn)*VA*x1*(x2*x2*x2)*x3 + 12*(Mn*Mn)*V2*(x2*x2*x2*x2)*x3 + 8*(Mn*Mn)*VA*(x2*x2*x2*x2)*x3 - 4*(Mn*Mn)*V2*(x2*x2*x2)*(x3*x3) - 8*(Mn*Mn)*VA*(x2*x2*x2)*(x3*x3) - 2*(Mn*Mn)*V2*x1*(x2*x2*x2)*x4 + 4*(Mn*Mn)*VA*x1*(x2*x2*x2)*x4 + 12*(Mn*Mn)*V2*(x2*x2*x2*x2)*x4 - 8*(Mn*Mn)*VA*(x2*x2*x2*x2)*x4 - 8*(Mn*Mn)*V2*(x2*x2*x2)*x3*x4 - 4*(Mn*Mn)*V2*(x2*x2*x2)*(x4*x4) + 8*(Mn*Mn)*VA*(x2*x2*x2)*(x4*x4) - 4*(Mn*Mn)*V2*(x1*x1)*(x2*x2)*x5 - 8*(Mn*Mn)*VA*(x1*x1)*(x2*x2)*x5 + V2*(x1*x1*x1)*(x2*x2)*x5 + 2*VA*(x1*x1*x1)*(x2*x2)*x5 + 4*(Mn*Mn)*V2*x1*(x2*x2*x2)*x5 + 8*(Mn*Mn)*VA*x1*(x2*x2*x2)*x5 - 2*V2*(x1*x1)*(x2*x2*x2)*x5 - 4*VA*(x1*x1)*(x2*x2*x2)*x5 + 16*(Mn*Mn)*V2*(x2*x2*x2*x2)*x5 + 16*(Mn*Mn)*VA*(x2*x2*x2*x2)*x5 - 8*(Mn*Mn)*V2*x1*(x2*x2)*x3*x5 - 16*(Mn*Mn)*VA*x1*(x2*x2)*x3*x5 + 2*V2*(x1*x1)*(x2*x2)*x3*x5 + 4*VA*(x1*x1)*(x2*x2)*x3*x5 - 12*(Mn*Mn)*V2*(x2*x2*x2)*x3*x5 - 24*(Mn*Mn)*VA*(x2*x2*x2)*x3*x5 - 8*(Mn*Mn)*V2*x1*(x2*x2)*x4*x5 - 16*(Mn*Mn)*VA*x1*(x2*x2)*x4*x5 + 2*V2*(x1*x1)*(x2*x2)*x4*x5 + 4*VA*(x1*x1)*(x2*x2)*x4*x5 - 12*(Mn*Mn)*V2*(x2*x2*x2)*x4*x5 + 8*(Mn*Mn)*VA*(x2*x2*x2)*x4*x5 - 4*(Mn*Mn)*V2*(x2*x2)*x3*x4*x5 - 8*(Mn*Mn)*VA*(x2*x2)*x3*x4*x5 + 4*(Mn*Mn)*V2*(x2*x2)*(x4*x4)*x5 - 8*(Mn*Mn)*VA*(x2*x2)*(x4*x4)*x5 + 2*(Mn*Mn)*V2*(x1*x1)*x2*(x5*x5) + 4*(Mn*Mn)*VA*(x1*x1)*x2*(x5*x5) - V2*(x1*x1*x1)*x2*(x5*x5) - 2*VA*(x1*x1*x1)*x2*(x5*x5) - 8*(Mn*Mn)*V2*x1*(x2*x2)*(x5*x5) - 16*(Mn*Mn)*VA*x1*(x2*x2)*(x5*x5) + 4*V2*(x1*x1)*(x2*x2)*(x5*x5) + 8*VA*(x1*x1)*(x2*x2)*(x5*x5) - 16*(Mn*Mn)*V2*(x2*x2*x2)*(x5*x5) - 32*(Mn*Mn)*VA*(x2*x2*x2)*(x5*x5) + 4*(Mn*Mn)*V2*x1*x2*x3*(x5*x5) + 8*(Mn*Mn)*VA*x1*x2*x3*(x5*x5) - 2*V2*(x1*x1)*x2*x3*(x5*x5) - 4*VA*(x1*x1)*x2*x3*(x5*x5) + 8*(Mn*Mn)*V2*(x2*x2)*x3*(x5*x5) + 16*(Mn*Mn)*VA*(x2*x2)*x3*(x5*x5) + 8*(Mn*Mn)*V2*x1*x2*x4*(x5*x5) + 16*(Mn*Mn)*VA*x1*x2*x4*(x5*x5) - 4*V2*(x1*x1)*x2*x4*(x5*x5) - 8*VA*(x1*x1)*x2*x4*(x5*x5) + 4*(Mn*Mn)*V2*x1*x2*(x5*x5*x5) + 8*(Mn*Mn)*VA*x1*x2*(x5*x5*x5) - 2*V2*(x1*x1)*x2*(x5*x5*x5) - 4*VA*(x1*x1)*x2*(x5*x5*x5) + 8*(Mn*Mn)*V2*(x2*x2)*(x5*x5*x5) + 16*(Mn*Mn)*VA*(x2*x2)*(x5*x5*x5) - 4*(Mn*Mn)*V2*x1*x4*(x5*x5*x5) - 8*(Mn*Mn)*VA*x1*x4*(x5*x5*x5) + 2*V2*(x1*x1)*x4*(x5*x5*x5) + 4*VA*(x1*x1)*x4*(x5*x5*x5) + 4*(ml1*ml1*ml1)*ml2*(Mn*Mn)*V2*(x2*x2)*(x2 - x5 - x6) - 4*(Mn*Mn)*V2*(x1*x1)*(x2*x2)*x6 + 8*(Mn*Mn)*VA*(x1*x1)*(x2*x2)*x6 + V2*(x1*x1*x1)*(x2*x2)*x6 - 2*VA*(x1*x1*x1)*(x2*x2)*x6 + 4*(Mn*Mn)*V2*x1*(x2*x2*x2)*x6 - 8*(Mn*Mn)*VA*x1*(x2*x2*x2)*x6 - 2*V2*(x1*x1)*(x2*x2*x2)*x6 + 4*VA*(x1*x1)*(x2*x2*x2)*x6 + 16*(Mn*Mn)*V2*(x2*x2*x2*x2)*x6 - 16*(Mn*Mn)*VA*(x2*x2*x2*x2)*x6 - 8*(Mn*Mn)*V2*x1*(x2*x2)*x3*x6 + 16*(Mn*Mn)*VA*x1*(x2*x2)*x3*x6 + 2*V2*(x1*x1)*(x2*x2)*x3*x6 - 4*VA*(x1*x1)*(x2*x2)*x3*x6 - 12*(Mn*Mn)*V2*(x2*x2*x2)*x3*x6 - 8*(Mn*Mn)*VA*(x2*x2*x2)*x3*x6 + 4*(Mn*Mn)*V2*(x2*x2)*(x3*x3)*x6 + 8*(Mn*Mn)*VA*(x2*x2)*(x3*x3)*x6 - 8*(Mn*Mn)*V2*x1*(x2*x2)*x4*x6 + 16*(Mn*Mn)*VA*x1*(x2*x2)*x4*x6 + 2*V2*(x1*x1)*(x2*x2)*x4*x6 - 4*VA*(x1*x1)*(x2*x2)*x4*x6 - 12*(Mn*Mn)*V2*(x2*x2*x2)*x4*x6 + 24*(Mn*Mn)*VA*(x2*x2*x2)*x4*x6 - 4*(Mn*Mn)*V2*(x2*x2)*x3*x4*x6 + 8*(Mn*Mn)*VA*(x2*x2)*x3*x4*x6 - 16*(Mn*Mn)*V2*x1*(x2*x2)*x5*x6 + 4*V2*(x1*x1)*(x2*x2)*x5*x6 - 16*(Mn*Mn)*V2*(x2*x2*x2)*x5*x6 + 4*(Mn*Mn)*V2*x1*x2*x3*x5*x6 + 8*(Mn*Mn)*VA*x1*x2*x3*x5*x6 - 2*V2*(x1*x1)*x2*x3*x5*x6 - 4*VA*(x1*x1)*x2*x3*x5*x6 + 8*(Mn*Mn)*V2*(x2*x2)*x3*x5*x6 + 16*(Mn*Mn)*VA*(x2*x2)*x3*x5*x6 + 4*(Mn*Mn)*V2*x1*x2*x4*x5*x6 - 8*(Mn*Mn)*VA*x1*x2*x4*x5*x6 - 2*V2*(x1*x1)*x2*x4*x5*x6 + 4*VA*(x1*x1)*x2*x4*x5*x6 + 8*(Mn*Mn)*V2*(x2*x2)*x4*x5*x6 - 16*(Mn*Mn)*VA*(x2*x2)*x4*x5*x6 + 12*(Mn*Mn)*V2*x1*x2*(x5*x5)*x6 + 24*(Mn*Mn)*VA*x1*x2*(x5*x5)*x6 - 6*V2*(x1*x1)*x2*(x5*x5)*x6 - 12*VA*(x1*x1)*x2*(x5*x5)*x6 + 8*(Mn*Mn)*V2*(x2*x2)*(x5*x5)*x6 + 16*(Mn*Mn)*VA*(x2*x2)*(x5*x5)*x6 - 4*(Mn*Mn)*V2*x1*x3*(x5*x5)*x6 - 8*(Mn*Mn)*VA*x1*x3*(x5*x5)*x6 + 2*V2*(x1*x1)*x3*(x5*x5)*x6 + 4*VA*(x1*x1)*x3*(x5*x5)*x6 - 8*(Mn*Mn)*V2*x1*(x5*x5*x5)*x6 - 16*(Mn*Mn)*VA*x1*(x5*x5*x5)*x6 + 4*V2*(x1*x1)*(x5*x5*x5)*x6 + 8*VA*(x1*x1)*(x5*x5*x5)*x6 + 2*(Mn*Mn)*V2*(x1*x1)*x2*(x6*x6) - 4*(Mn*Mn)*VA*(x1*x1)*x2*(x6*x6) - V2*(x1*x1*x1)*x2*(x6*x6) + 2*VA*(x1*x1*x1)*x2*(x6*x6) - 8*(Mn*Mn)*V2*x1*(x2*x2)*(x6*x6) + 16*(Mn*Mn)*VA*x1*(x2*x2)*(x6*x6) + 4*V2*(x1*x1)*(x2*x2)*(x6*x6) - 8*VA*(x1*x1)*(x2*x2)*(x6*x6) - 16*(Mn*Mn)*V2*(x2*x2*x2)*(x6*x6) + 32*(Mn*Mn)*VA*(x2*x2*x2)*(x6*x6) + 8*(Mn*Mn)*V2*x1*x2*x3*(x6*x6) - 16*(Mn*Mn)*VA*x1*x2*x3*(x6*x6) - 4*V2*(x1*x1)*x2*x3*(x6*x6) + 8*VA*(x1*x1)*x2*x3*(x6*x6) + 4*(Mn*Mn)*V2*x1*x2*x4*(x6*x6) - 8*(Mn*Mn)*VA*x1*x2*x4*(x6*x6) - 2*V2*(x1*x1)*x2*x4*(x6*x6) + 4*VA*(x1*x1)*x2*x4*(x6*x6) + 8*(Mn*Mn)*V2*(x2*x2)*x4*(x6*x6) - 16*(Mn*Mn)*VA*(x2*x2)*x4*(x6*x6) + 12*(Mn*Mn)*V2*x1*x2*x5*(x6*x6) - 24*(Mn*Mn)*VA*x1*x2*x5*(x6*x6) - 6*V2*(x1*x1)*x2*x5*(x6*x6) + 12*VA*(x1*x1)*x2*x5*(x6*x6) + 8*(Mn*Mn)*V2*(x2*x2)*x5*(x6*x6) - 16*(Mn*Mn)*VA*(x2*x2)*x5*(x6*x6) - 4*(Mn*Mn)*V2*x1*x4*x5*(x6*x6) + 8*(Mn*Mn)*VA*x1*x4*x5*(x6*x6) + 2*V2*(x1*x1)*x4*x5*(x6*x6) - 4*VA*(x1*x1)*x4*x5*(x6*x6) + 4*(Mn*Mn)*V2*x1*x2*(x6*x6*x6) - 8*(Mn*Mn)*VA*x1*x2*(x6*x6*x6) - 2*V2*(x1*x1)*x2*(x6*x6*x6) + 4*VA*(x1*x1)*x2*(x6*x6*x6) + 8*(Mn*Mn)*V2*(x2*x2)*(x6*x6*x6) - 16*(Mn*Mn)*VA*(x2*x2)*(x6*x6*x6) - 4*(Mn*Mn)*V2*x1*x3*(x6*x6*x6) + 8*(Mn*Mn)*VA*x1*x3*(x6*x6*x6) + 2*V2*(x1*x1)*x3*(x6*x6*x6) - 4*VA*(x1*x1)*x3*(x6*x6*x6) - 8*(Mn*Mn)*V2*x1*x5*(x6*x6*x6) + 16*(Mn*Mn)*VA*x1*x5*(x6*x6*x6) + 4*V2*(x1*x1)*x5*(x6*x6*x6) - 8*VA*(x1*x1)*x5*(x6*x6*x6) + 2*(ml1*ml1*ml1*ml1)*(Mn*Mn)*(x2*x2)*(2*VA*(x2 - x5 - x6) + V2*(-x5 + x6)) + 2*(ml2*ml2*ml2*ml2)*(Mn*Mn)*(x2*x2)*(V2*(x5 - x6) + 2*VA*(-x2 + x5 + x6)) + 2*ml1*ml2*V2*(2*(ml2*ml2)*(Mn*Mn)*(x2*x2)*(x2 - x5 - x6) - x1*x1*(x2*x2*x2 - 2*(x2*x2)*(x5 + x6) - 2*x5*x6*(x5 + x6) + x2*(x5*x5 + 4*x5*x6 + x6*x6)) + 2*(Mn*Mn)*(-(x1*(x2*x2*x2 + 2*(x2*x2)*(x5 + x6) + 2*x5*x6*(x5 + x6) - x2*(x5*x5 + 4*x5*x6 + x6*x6))) + x2*x2*(4*(x2*x2) + (x5 + x6)*(x3 + x4 + 2*(x5 + x6)) - x2*(3*x3 + 3*x4 + 4*(x5 + x6))))) + ml2*ml2*(x1*x1*(-(V2*(x5 - x6)*(x2*x2 + 2*x5*x6 - x2*(x5 + x6))) - 2*VA*(x2*x2*(x5 + x6) + 2*x5*x6*(x5 + x6) - x2*(x5*x5 + 4*x5*x6 + x6*x6))) + 2*(Mn*Mn)*(V2*(-2*(x2*x2*x2*x2) + x2*x2*x2*(x3 + x4 + 4*x5) + 2*x1*x5*(x5 - x6)*x6 + x1*x2*(-(x5*x5) + x6*x6) + x2*x2*(-2*x5*(x3 - x4 + 2*x5) + x1*(x5 + x6))) + 2*VA*(x2*x2*(-2*(x2*x2) - 2*(x3 + 2*x5)*(x5 + x6) + x2*(3*x3 + x4 + 6*x5 + 2*x6)) + x1*(x2*x2*x2 + x2*x2*(x5 + x6) + 2*x5*x6*(x5 + x6) - x2*(x5*x5 + 4*x5*x6 + x6*x6))))) + ml1*ml1*(x1*x1*(V2*(x5 - x6)*(x2*x2 + 2*x5*x6 - x2*(x5 + x6)) + 2*VA*(x2*x2*(x5 + x6) + 2*x5*x6*(x5 + x6) - x2*(x5*x5 + 4*x5*x6 + x6*x6))) - 2*(Mn*Mn)*(V2*(2*(x2*x2*x2*x2) + 2*x1*x5*(x5 - x6)*x6 - x2*x2*x2*(x3 + x4 + 4*x6) + x1*x2*(-(x5*x5) + x6*x6) - x2*x2*(2*(x3 - x4 - 2*x6)*x6 + x1*(x5 + x6))) + 2*VA*(x2*x2*(-2*(x2*x2) - 2*(x5 + x6)*(x4 + 2*x6) + x2*(x3 + 3*x4 + 2*x5 + 6*x6)) + x1*(x2*x2*x2 + x2*x2*(x5 + x6) + 2*x5*x6*(x5 + x6) - x2*(x5*x5 + 4*x5*x6 + x6*x6)))))) + A2*(2*(Enu*Enu)*(Mn*Mn)*x1*(-2*x1*(x2*x2*x2*x2) + 4*(x2*x2*x2*x2*x2) + x1*(x2*x2*x2)*x3 - 6*(x2*x2*x2*x2)*x3 + 2*(x2*x2*x2)*(x3*x3) + x1*(x2*x2*x2)*x4 - 6*(x2*x2*x2*x2)*x4 + 4*(x2*x2*x2)*x3*x4 + 2*(x2*x2*x2)*(x4*x4) + 4*(x1*x1)*(x2*x2)*x5 - 6*x1*(x2*x2*x2)*x5 - 8*(x2*x2*x2*x2)*x5 + 8*x1*(x2*x2)*x3*x5 + 6*(x2*x2*x2)*x3*x5 + 8*x1*(x2*x2)*x4*x5 + 6*(x2*x2*x2)*x4*x5 + 2*(x2*x2)*x3*x4*x5 - 2*(x2*x2)*(x4*x4)*x5 - 3*(x1*x1)*x2*(x5*x5) + 12*x1*(x2*x2)*(x5*x5) + 8*(x2*x2*x2)*(x5*x5) - 6*x1*x2*x3*(x5*x5) - 4*(x2*x2)*x3*(x5*x5) - 12*x1*x2*x4*(x5*x5) - 6*x1*x2*(x5*x5*x5) - 4*(x2*x2)*(x5*x5*x5) + 6*x1*x4*(x5*x5*x5) + 2*(ml1*ml1*ml1)*ml2*(x2*x2)*(x2 - x5 - x6) + ml1*ml1*ml1*ml1*(x2*x2)*(x5 - x6) + 4*(x1*x1)*(x2*x2)*x6 - 6*x1*(x2*x2*x2)*x6 - 8*(x2*x2*x2*x2)*x6 + 8*x1*(x2*x2)*x3*x6 + 6*(x2*x2*x2)*x3*x6 - 2*(x2*x2)*(x3*x3)*x6 + 8*x1*(x2*x2)*x4*x6 + 6*(x2*x2*x2)*x4*x6 + 2*(x2*x2)*x3*x4*x6 + 16*x1*(x2*x2)*x5*x6 + 8*(x2*x2*x2)*x5*x6 - 6*x1*x2*x3*x5*x6 - 4*(x2*x2)*x3*x5*x6 - 6*x1*x2*x4*x5*x6 - 4*(x2*x2)*x4*x5*x6 - 18*x1*x2*(x5*x5)*x6 - 4*(x2*x2)*(x5*x5)*x6 + 6*x1*x3*(x5*x5)*x6 + 12*x1*(x5*x5*x5)*x6 - 3*(x1*x1)*x2*(x6*x6) + 12*x1*(x2*x2)*(x6*x6) + 8*(x2*x2*x2)*(x6*x6) - 12*x1*x2*x3*(x6*x6) - 6*x1*x2*x4*(x6*x6) - 4*(x2*x2)*x4*(x6*x6) - 18*x1*x2*x5*(x6*x6) - 4*(x2*x2)*x5*(x6*x6) + 6*x1*x4*x5*(x6*x6) - 6*x1*x2*(x6*x6*x6) - 4*(x2*x2)*(x6*x6*x6) + 6*x1*x3*(x6*x6*x6) + 12*x1*x5*(x6*x6*x6) + ml2*ml2*ml2*ml2*(x2*x2)*(-x5 + x6) + ml2*ml2*(2*(x2*x2*x2*x2) - x2*x2*x2*(x3 + x4 + 4*x5) + 6*x1*x5*x6*(-x5 + x6) + 3*x1*x2*(x5*x5 - x6*x6) + x2*x2*(2*x5*(x3 - x4 + 2*x5) + x1*(-3*x5 + x6))) + ml1*ml1*(2*(x2*x2*x2*x2) + 6*x1*x5*(x5 - x6)*x6 - x2*x2*x2*(x3 + x4 + 4*x6) + 3*x1*x2*(-(x5*x5) + x6*x6) + x2*x2*(x1*(x5 - 3*x6) + 2*x6*(-x3 + x4 + 2*x6))) + 2*ml1*ml2*(ml2*ml2*(x2*x2)*(x2 - x5 - x6) + x1*(x2*x2*x2 - 6*(x2*x2)*(x5 + x6) - 6*x5*x6*(x5 + x6) + 3*x2*(x5*x5 + 4*x5*x6 + x6*x6)) + x2*x2*(4*(x2*x2) + (x5 + x6)*(x3 + x4 + 2*(x5 + x6)) - x2*(3*x3 + 3*x4 + 4*(x5 + x6))))) - 2*Enu*Mn*x1*x2*(-2*x1*(x2*x2*x2*x2) + 4*(x2*x2*x2*x2*x2) + x1*(x2*x2*x2)*x3 - 6*(x2*x2*x2*x2)*x3 + 2*(x2*x2*x2)*(x3*x3) + x1*(x2*x2*x2)*x4 - 6*(x2*x2*x2*x2)*x4 + 4*(x2*x2*x2)*x3*x4 + 2*(x2*x2*x2)*(x4*x4) + 4*(x1*x1)*(x2*x2)*x5 - 6*x1*(x2*x2*x2)*x5 - 8*(x2*x2*x2*x2)*x5 + 8*x1*(x2*x2)*x3*x5 + 6*(x2*x2*x2)*x3*x5 + 8*x1*(x2*x2)*x4*x5 + 6*(x2*x2*x2)*x4*x5 + 2*(x2*x2)*x3*x4*x5 - 2*(x2*x2)*(x4*x4)*x5 - 3*(x1*x1)*x2*(x5*x5) + 12*x1*(x2*x2)*(x5*x5) + 8*(x2*x2*x2)*(x5*x5) - 6*x1*x2*x3*(x5*x5) - 4*(x2*x2)*x3*(x5*x5) - 12*x1*x2*x4*(x5*x5) - 6*x1*x2*(x5*x5*x5) - 4*(x2*x2)*(x5*x5*x5) + 6*x1*x4*(x5*x5*x5) + 2*(ml1*ml1*ml1)*ml2*(x2*x2)*(x2 - x5 - x6) + ml1*ml1*ml1*ml1*(x2*x2)*(x5 - x6) + 4*(x1*x1)*(x2*x2)*x6 - 6*x1*(x2*x2*x2)*x6 - 8*(x2*x2*x2*x2)*x6 + 8*x1*(x2*x2)*x3*x6 + 6*(x2*x2*x2)*x3*x6 - 2*(x2*x2)*(x3*x3)*x6 + 8*x1*(x2*x2)*x4*x6 + 6*(x2*x2*x2)*x4*x6 + 2*(x2*x2)*x3*x4*x6 + 16*x1*(x2*x2)*x5*x6 + 8*(x2*x2*x2)*x5*x6 - 6*x1*x2*x3*x5*x6 - 4*(x2*x2)*x3*x5*x6 - 6*x1*x2*x4*x5*x6 - 4*(x2*x2)*x4*x5*x6 - 18*x1*x2*(x5*x5)*x6 - 4*(x2*x2)*(x5*x5)*x6 + 6*x1*x3*(x5*x5)*x6 + 12*x1*(x5*x5*x5)*x6 - 3*(x1*x1)*x2*(x6*x6) + 12*x1*(x2*x2)*(x6*x6) + 8*(x2*x2*x2)*(x6*x6) - 12*x1*x2*x3*(x6*x6) - 6*x1*x2*x4*(x6*x6) - 4*(x2*x2)*x4*(x6*x6) - 18*x1*x2*x5*(x6*x6) - 4*(x2*x2)*x5*(x6*x6) + 6*x1*x4*x5*(x6*x6) - 6*x1*x2*(x6*x6*x6) - 4*(x2*x2)*(x6*x6*x6) + 6*x1*x3*(x6*x6*x6) + 12*x1*x5*(x6*x6*x6) + ml2*ml2*ml2*ml2*(x2*x2)*(-x5 + x6) + ml2*ml2*(2*(x2*x2*x2*x2) - x2*x2*x2*(x3 + x4 + 4*x5) + 6*x1*x5*x6*(-x5 + x6) + 3*x1*x2*(x5*x5 - x6*x6) + x2*x2*(2*x5*(x3 - x4 + 2*x5) + x1*(-3*x5 + x6))) + ml1*ml1*(2*(x2*x2*x2*x2) + 6*x1*x5*(x5 - x6)*x6 - x2*x2*x2*(x3 + x4 + 4*x6) + 3*x1*x2*(-(x5*x5) + x6*x6) + x2*x2*(x1*(x5 - 3*x6) + 2*x6*(-x3 + x4 + 2*x6))) + 2*ml1*ml2*(ml2*ml2*(x2*x2)*(x2 - x5 - x6) + x1*(x2*x2*x2 - 6*(x2*x2)*(x5 + x6) - 6*x5*x6*(x5 + x6) + 3*x2*(x5*x5 + 4*x5*x6 + x6*x6)) + x2*x2*(4*(x2*x2) + (x5 + x6)*(x3 + x4 + 2*(x5 + x6)) - x2*(3*x3 + 3*x4 + 4*(x5 + x6))))) + x2*x2*(-4*(ml2*ml2)*(Mn*Mn)*(x2*x2*x2*x2) + 4*(Mn*Mn)*x1*(x2*x2*x2*x2) - 8*(Mn*Mn)*(x2*x2*x2*x2*x2) + 2*(ml2*ml2)*(Mn*Mn)*(x2*x2*x2)*x3 - 2*(Mn*Mn)*x1*(x2*x2*x2)*x3 + 12*(Mn*Mn)*(x2*x2*x2*x2)*x3 - 4*(Mn*Mn)*(x2*x2*x2)*(x3*x3) + 2*(ml2*ml2)*(Mn*Mn)*(x2*x2*x2)*x4 - 2*(Mn*Mn)*x1*(x2*x2*x2)*x4 + 12*(Mn*Mn)*(x2*x2*x2*x2)*x4 - 8*(Mn*Mn)*(x2*x2*x2)*x3*x4 - 4*(Mn*Mn)*(x2*x2*x2)*(x4*x4) + 2*(ml2*ml2*ml2*ml2)*(Mn*Mn)*(x2*x2)*x5 + 2*(ml2*ml2)*(Mn*Mn)*x1*(x2*x2)*x5 - ml2*ml2*(x1*x1)*(x2*x2)*x5 - 4*(Mn*Mn)*(x1*x1)*(x2*x2)*x5 + x1*x1*x1*(x2*x2)*x5 + 8*(ml2*ml2)*(Mn*Mn)*(x2*x2*x2)*x5 + 4*(Mn*Mn)*x1*(x2*x2*x2)*x5 - 2*(x1*x1)*(x2*x2*x2)*x5 + 16*(Mn*Mn)*(x2*x2*x2*x2)*x5 - 4*(ml2*ml2)*(Mn*Mn)*(x2*x2)*x3*x5 - 8*(Mn*Mn)*x1*(x2*x2)*x3*x5 + 2*(x1*x1)*(x2*x2)*x3*x5 - 12*(Mn*Mn)*(x2*x2*x2)*x3*x5 + 4*(ml2*ml2)*(Mn*Mn)*(x2*x2)*x4*x5 - 8*(Mn*Mn)*x1*(x2*x2)*x4*x5 + 2*(x1*x1)*(x2*x2)*x4*x5 - 12*(Mn*Mn)*(x2*x2*x2)*x4*x5 - 4*(Mn*Mn)*(x2*x2)*x3*x4*x5 + 4*(Mn*Mn)*(x2*x2)*(x4*x4)*x5 - 2*(ml2*ml2)*(Mn*Mn)*x1*x2*(x5*x5) + ml2*ml2*(x1*x1)*x2*(x5*x5) + 2*(Mn*Mn)*(x1*x1)*x2*(x5*x5) - x1*x1*x1*x2*(x5*x5) - 8*(ml2*ml2)*(Mn*Mn)*(x2*x2)*(x5*x5) - 8*(Mn*Mn)*x1*(x2*x2)*(x5*x5) + 4*(x1*x1)*(x2*x2)*(x5*x5) - 16*(Mn*Mn)*(x2*x2*x2)*(x5*x5) + 4*(Mn*Mn)*x1*x2*x3*(x5*x5) - 2*(x1*x1)*x2*x3*(x5*x5) + 8*(Mn*Mn)*(x2*x2)*x3*(x5*x5) + 8*(Mn*Mn)*x1*x2*x4*(x5*x5) - 4*(x1*x1)*x2*x4*(x5*x5) + 4*(Mn*Mn)*x1*x2*(x5*x5*x5) - 2*(x1*x1)*x2*(x5*x5*x5) + 8*(Mn*Mn)*(x2*x2)*(x5*x5*x5) - 4*(Mn*Mn)*x1*x4*(x5*x5*x5) + 2*(x1*x1)*x4*(x5*x5*x5) - 2*(ml2*ml2*ml2*ml2)*(Mn*Mn)*(x2*x2)*x6 + 2*(ml2*ml2)*(Mn*Mn)*x1*(x2*x2)*x6 + ml2*ml2*(x1*x1)*(x2*x2)*x6 - 4*(Mn*Mn)*(x1*x1)*(x2*x2)*x6 + x1*x1*x1*(x2*x2)*x6 + 4*(Mn*Mn)*x1*(x2*x2*x2)*x6 - 2*(x1*x1)*(x2*x2*x2)*x6 + 16*(Mn*Mn)*(x2*x2*x2*x2)*x6 - 8*(Mn*Mn)*x1*(x2*x2)*x3*x6 + 2*(x1*x1)*(x2*x2)*x3*x6 - 12*(Mn*Mn)*(x2*x2*x2)*x3*x6 + 4*(Mn*Mn)*(x2*x2)*(x3*x3)*x6 - 8*(Mn*Mn)*x1*(x2*x2)*x4*x6 + 2*(x1*x1)*(x2*x2)*x4*x6 - 12*(Mn*Mn)*(x2*x2*x2)*x4*x6 - 4*(Mn*Mn)*(x2*x2)*x3*x4*x6 - 16*(Mn*Mn)*x1*(x2*x2)*x5*x6 + 4*(x1*x1)*(x2*x2)*x5*x6 - 16*(Mn*Mn)*(x2*x2*x2)*x5*x6 + 4*(Mn*Mn)*x1*x2*x3*x5*x6 - 2*(x1*x1)*x2*x3*x5*x6 + 8*(Mn*Mn)*(x2*x2)*x3*x5*x6 + 4*(Mn*Mn)*x1*x2*x4*x5*x6 - 2*(x1*x1)*x2*x4*x5*x6 + 8*(Mn*Mn)*(x2*x2)*x4*x5*x6 + 4*(ml2*ml2)*(Mn*Mn)*x1*(x5*x5)*x6 - 2*(ml2*ml2)*(x1*x1)*(x5*x5)*x6 + 12*(Mn*Mn)*x1*x2*(x5*x5)*x6 - 6*(x1*x1)*x2*(x5*x5)*x6 + 8*(Mn*Mn)*(x2*x2)*(x5*x5)*x6 - 4*(Mn*Mn)*x1*x3*(x5*x5)*x6 + 2*(x1*x1)*x3*(x5*x5)*x6 - 8*(Mn*Mn)*x1*(x5*x5*x5)*x6 + 4*(x1*x1)*(x5*x5*x5)*x6 + 2*(ml2*ml2)*(Mn*Mn)*x1*x2*(x6*x6) - ml2*ml2*(x1*x1)*x2*(x6*x6) + 2*(Mn*Mn)*(x1*x1)*x2*(x6*x6) - x1*x1*x1*x2*(x6*x6) - 8*(Mn*Mn)*x1*(x2*x2)*(x6*x6) + 4*(x1*x1)*(x2*x2)*(x6*x6) - 16*(Mn*Mn)*(x2*x2*x2)*(x6*x6) + 8*(Mn*Mn)*x1*x2*x3*(x6*x6) - 4*(x1*x1)*x2*x3*(x6*x6) + 4*(Mn*Mn)*x1*x2*x4*(x6*x6) - 2*(x1*x1)*x2*x4*(x6*x6) + 8*(Mn*Mn)*(x2*x2)*x4*(x6*x6) - 4*(ml2*ml2)*(Mn*Mn)*x1*x5*(x6*x6) + 2*(ml2*ml2)*(x1*x1)*x5*(x6*x6) + 12*(Mn*Mn)*x1*x2*x5*(x6*x6) - 6*(x1*x1)*x2*x5*(x6*x6) + 8*(Mn*Mn)*(x2*x2)*x5*(x6*x6) - 4*(Mn*Mn)*x1*x4*x5*(x6*x6) + 2*(x1*x1)*x4*x5*(x6*x6) + 4*(Mn*Mn)*x1*x2*(x6*x6*x6) - 2*(x1*x1)*x2*(x6*x6*x6) + 8*(Mn*Mn)*(x2*x2)*(x6*x6*x6) - 4*(Mn*Mn)*x1*x3*(x6*x6*x6) + 2*(x1*x1)*x3*(x6*x6*x6) - 8*(Mn*Mn)*x1*x5*(x6*x6*x6) + 4*(x1*x1)*x5*(x6*x6*x6) + 2*(ml1*ml1*ml1*ml1)*(Mn*Mn)*(x2*x2)*(-x5 + x6) + 4*(ml1*ml1*ml1)*ml2*(Mn*Mn)*(x2*x2)*(-x2 + x5 + x6) + ml1*ml1*(x1*x1*(x5 - x6)*(x2*x2 + 2*x5*x6 - x2*(x5 + x6)) + 2*(Mn*Mn)*(-2*(x2*x2*x2*x2) + 2*x1*x5*x6*(-x5 + x6) + x2*x2*x2*(x3 + x4 + 4*x6) + x1*x2*(x5*x5 - x6*x6) + x2*x2*(2*(x3 - x4 - 2*x6)*x6 + x1*(x5 + x6)))) - 2*ml1*ml2*(2*(ml2*ml2)*(Mn*Mn)*(x2*x2)*(x2 - x5 - x6) - x1*x1*(x2*x2*x2 - 2*(x2*x2)*(x5 + x6) - 2*x5*x6*(x5 + x6) + x2*(x5*x5 + 4*x5*x6 + x6*x6)) + 2*(Mn*Mn)*(-(x1*(x2*x2*x2 + 2*(x2*x2)*(x5 + x6) + 2*x5*x6*(x5 + x6) - x2*(x5*x5 + 4*x5*x6 + x6*x6))) + x2*x2*(4*(x2*x2) + (x5 + x6)*(x3 + x4 + 2*(x5 + x6)) - x2*(3*x3 + 3*x4 + 4*(x5 + x6)))))))))*(Z*Z))/(Enu*Enu*(Mn*Mn)*(x1*x1)*(x2*x2*x2*x2)*((x1 + 2*x3)*(x1 + 2*x3))*((x1 + 2*x4)*(x1 + 2*x4)));
 
   ///////////////////////////////////////////////////////////////////////////////////
   // JACOBIANS AND PREFACTORS 
   dsigma *= Jacob;
-  
 
-  // Hacky way to avoid non-sensical values for the cross section below thershold
-    if (Enu <=  (SQR(ml1 + ml2) + 2*(ml1 + ml2)*Mn)/2.0/Mn  )
-  {
-    dsigma = 0.0;
-  }
+  // Changing units to zeptobarn = zb = 1e-45 cm^2
+  dsigma *= (GeV2_to_cm2*1e45);
 
-  std::vector<long double> xphys;
+  myMC->xphys[0] = x1;
+  myMC->xphys[1] = x2;
+  myMC->xphys[2] = x3;
+  myMC->xphys[3] = x4;
+  myMC->xphys[4] = x5;
+  myMC->xphys[5] = x6;
+  myMC->xphys[6] = x7;
+  myMC->xphys[7] = x8;
+  myMC->xphys[8] = Enu;
+  myMC->xphys[9] = dsigma;
 
-  xphys.push_back(x1);
-  xphys.push_back(x2);
-  xphys.push_back(x3);
-  xphys.push_back(x4);
-  xphys.push_back(x5);
-  xphys.push_back(x6);
-  xphys.push_back(x7);
-  xphys.push_back(x8);
-  xphys.push_back(Enu);
-  xphys.push_back(dsigma);
-  
-  return xphys;
+  return 0;
 }
 
-std::vector<long double> DifFromIntToPhysical_Efixed(const cubareal xx[], void *userdata){
+int DifFromIntToPhysical_Efixed(const cubareal xx[], void *MC){
 
   long double u1_s    = xx[0];
   long double u2_s    = xx[1];
@@ -490,16 +487,14 @@ std::vector<long double> DifFromIntToPhysical_Efixed(const cubareal xx[], void *
   //////////////////////////////////////////////////
   // get data from user
 
-  tridentMC* myMC = (tridentMC *)userdata;
+  tridentMC* myMC = (tridentMC *)MC;
   
   long double ml1 = myMC->ml1;
   long double ml2 = myMC->ml2;
   long double A = myMC->A;
   long double Z = myMC->Z;
   long double Mn = myMC->Mn;
-
-  long double mzprime;
-  mzprime = myMC->params[1];
+  long double mzprime = myMC->mzprime;
 
   long double Diag11 = myMC->terms[0];
   long double Diag22 = myMC->terms[1];
@@ -587,62 +582,71 @@ std::vector<long double> DifFromIntToPhysical_Efixed(const cubareal xx[], void *
   long double m6_l = 0;
   long double m6_u = 2*E1*E2;
 
-  if (BSM == SMonly)
+  switch ((int) BSM) 
   {
-    u6_l = m6_l;
-    u6_u = m6_u;
-    u6   = u6_s*(u6_u - u6_l) + u6_l;
-    m6 = u6;
-    jacob_u6 = 1.0;
+    case (SMonly):
+      u6_l = m6_l;
+      u6_u = m6_u;
+      u6   = u6_s*(u6_u - u6_l) + u6_l;
+      m6 = u6;
+      jacob_u6 = 1.0;
 
-    V2     = myMC->terms[3];
-    A2     = myMC->terms[4];
-    VA     = myMC->terms[5];
-  }
-  else if(BSM == INTERFERENCE)
-  {
-  //////////////////////////////////////////////////////////
-  // BSM PROPAGATOR 
-    // long double prop = (1.0/(-2*(m6/mzprime/mzprime) - 1.0))/mzprime/mzprime;
-    u6_l = log(1.0/(2.0*m6_u + mzprime*mzprime));
-    u6_u = log(1.0/(2.0*m6_l + mzprime*mzprime));
-    u6   = u6_s*(u6_u - u6_l) + u6_l;
-    m6   = -mzprime*mzprime/2.0 + exp(-u6)/2.0;
+      V2     = myMC->terms[3];
+      A2     = myMC->terms[4];
+      VA     = myMC->terms[5];
+      break;
 
-    prop = -exp(u6);
-    jacob_u6 = exp(-u6)/2.0;
+    case (INTERFERENCE):
 
-    V2     = myMC->terms[3] * prop;
-    A2     = myMC->terms[4] * prop;
-    VA     = myMC->terms[5] * prop;
-  }
-  else if(BSM == BSMonly)
-  {    
-    u6_l = 1.0/(2.0*m6_u + mzprime*mzprime);
-    u6_u = 1.0/(2.0*m6_l + mzprime*mzprime);
-    u6   = u6_s*(u6_u - u6_l) + u6_l;
-    m6   = -mzprime*mzprime/2.0 + 1.0/2.0/u6;
+      //////////////////////////////////////////////////////////
+      // BSM PROPAGATOR 
+      // long double prop = (1.0/(-2*(m6/mzprime/mzprime) - 1.0))/mzprime/mzprime;
+      u6_l = log(1.0/(2.0*m6_u + mzprime*mzprime));
+      u6_u = log(1.0/(2.0*m6_l + mzprime*mzprime));
+      u6   = u6_s*(u6_u - u6_l) + u6_l;
+      m6   = -mzprime*mzprime/2.0 + exp(-u6)/2.0;
 
-    prop = -u6;
-    jacob_u6 = 1.0/(u6*u6)/2.0;
+      prop = -exp(u6);
+      jacob_u6 = exp(-u6)/2.0;
 
-    V2     = myMC->terms[3] * prop*prop;
-    A2     = myMC->terms[4] * prop*prop;
-    VA     = myMC->terms[5] * prop*prop;
-  }
-  else if( BSM == SMandBSM)
-  {
-    u6_l = m6_l;
-    u6_u = m6_u;
-    u6   = u6_s*(u6_u - u6_l) + u6_l;
-    m6 = u6;
-    jacob_u6 = 1.0;
+      V2     = myMC->terms[3] * prop;
+      A2     = myMC->terms[4] * prop;
+      VA     = myMC->terms[5] * prop;
+      break;
 
-    prop = 1.0/(2.0*m6 + mzprime*mzprime);
+    case (BSMonly):
 
-    V2     = (myMC->Vijk + myMC->gprimeV*myMC->gprimeV/2.0/sqrt(2.0)/Gf * myMC->CHARGE * prop)*(myMC->Vijk + myMC->gprimeV*myMC->gprimeV/2.0/sqrt(2.0)/Gf * myMC->CHARGE * prop) ;
-    A2     = (myMC->Aijk + myMC->gprimeA*myMC->gprimeA/2.0/sqrt(2.0)/Gf * myMC->CHARGE * prop)*(myMC->Aijk + myMC->gprimeA*myMC->gprimeA/2.0/sqrt(2.0)/Gf * myMC->CHARGE * prop) ;
-    VA     = (myMC->Aijk + myMC->gprimeA*myMC->gprimeA/2.0/sqrt(2.0)/Gf * myMC->CHARGE * prop)*(myMC->Vijk + myMC->gprimeV*myMC->gprimeV/2.0/sqrt(2.0)/Gf * myMC->CHARGE * prop);
+      u6_l = 1.0/(2.0*m6_u + mzprime*mzprime);
+      u6_u = 1.0/(2.0*m6_l + mzprime*mzprime);
+      u6   = u6_s*(u6_u - u6_l) + u6_l;
+      m6   = -mzprime*mzprime/2.0 + 1.0/2.0/u6;
+
+      prop = -u6;
+      jacob_u6 = 1.0/(u6*u6)/2.0;
+
+      V2     = myMC->terms[3] * prop*prop;
+      A2     = myMC->terms[4] * prop*prop;
+      VA     = myMC->terms[5] * prop*prop;
+      break;
+    
+    case (SMandBSM):
+     
+      u6_l = m6_l;
+      u6_u = m6_u;
+      u6   = u6_s*(u6_u - u6_l) + u6_l;
+      m6 = u6;
+      jacob_u6 = 1.0;
+
+      prop = 1.0/(2.0*m6 + mzprime*mzprime);
+
+      V2     = (myMC->Vijk + myMC->gprimeV*myMC->gprimeV/2.0/sqrt(2.0)/Gf * myMC->CHARGE * prop)*(myMC->Vijk + myMC->gprimeV*myMC->gprimeV/2.0/sqrt(2.0)/Gf * myMC->CHARGE * prop) ;
+      A2     = (myMC->Aijk + myMC->gprimeA*myMC->gprimeA/2.0/sqrt(2.0)/Gf * myMC->CHARGE * prop)*(myMC->Aijk + myMC->gprimeA*myMC->gprimeA/2.0/sqrt(2.0)/Gf * myMC->CHARGE * prop) ;
+      VA     = (myMC->Aijk + myMC->gprimeA*myMC->gprimeA/2.0/sqrt(2.0)/Gf * myMC->CHARGE * prop)*(myMC->Vijk + myMC->gprimeV*myMC->gprimeV/2.0/sqrt(2.0)/Gf * myMC->CHARGE * prop);
+      break;
+
+    default:
+      std::cout << "Could not determine what contributions (BSM) to include." << std::endl;
+      break;
   }
   
   long double C2 = 1.0 - m6 / E1 / E2;
@@ -696,7 +700,6 @@ std::vector<long double> DifFromIntToPhysical_Efixed(const cubareal xx[], void *
 
   // FERMI BLOCKING
   if(myMC->PAULI_BLOCKING == W_BLOCKING){
-
     dsigma *= F_PAULI_BLOCK(x1);
   }
 
@@ -705,29 +708,26 @@ std::vector<long double> DifFromIntToPhysical_Efixed(const cubareal xx[], void *
   // JACOBIANS AND PREFACTORS 
   dsigma *= Jacob;
   
-
-  // Hacky way to avoid non-sensical values for the cross section below thershold
-    if (Enu <=  (SQR(ml1 + ml2) + 2*(ml1 + ml2)*Mn)/2.0/Mn  )
-  {
-    dsigma = 0.0;
-  }
-
-  std::vector<long double> xphys;
-
-  xphys.push_back(x1);
-  xphys.push_back(x2);
-  xphys.push_back(x3);
-  xphys.push_back(x4);
-  xphys.push_back(x5);
-  xphys.push_back(x6);
-  xphys.push_back(x7);
-  xphys.push_back(x8);
-  xphys.push_back(Enu);
-  xphys.push_back(dsigma);
+  // Changing units to zeptobarn = zb = 1e-45 cm^2
+  dsigma *= (GeV2_to_cm2*1e45);
   
-  return xphys;
+
+  myMC->xphys[0] = x1;
+  myMC->xphys[1] = x2;
+  myMC->xphys[2] = x3;
+  myMC->xphys[3] = x4;
+  myMC->xphys[4] = x5;
+  myMC->xphys[5] = x6;
+  myMC->xphys[6] = x7;
+  myMC->xphys[7] = x8;
+  myMC->xphys[8] = Enu;
+  myMC->xphys[9] = dsigma;
+
+  return 0;
 }
-std::vector<long double> DifFromIntToPhysical(const cubareal xx[], void *userdata){
+
+
+int DifFromIntToPhysical(const cubareal xx[], void *MC){
 
   long double u1_s    = xx[0];
   long double u2_s    = xx[1];
@@ -746,16 +746,15 @@ std::vector<long double> DifFromIntToPhysical(const cubareal xx[], void *userdat
   //////////////////////////////////////////////////
   // get data from user
 
-  tridentMC* myMC = (tridentMC *)userdata;
-  
+  tridentMC* myMC = (tridentMC *)MC;
+
   long double ml1 = myMC->ml1;
   long double ml2 = myMC->ml2;
   long double A = myMC->A;
   long double Z = myMC->Z;
   long double Mn = myMC->Mn;
+  long double mzprime = myMC->mzprime;
 
-  long double mzprime;
-  mzprime = myMC->params[1];
 
   long double Diag11 = myMC->terms[0];
   long double Diag22 = myMC->terms[1];
@@ -839,62 +838,71 @@ std::vector<long double> DifFromIntToPhysical(const cubareal xx[], void *userdat
   long double m6_l = 0;
   long double m6_u = 2*E1*E2;
 
-  if (BSM == SMonly)
+  switch ((int) BSM) 
   {
-    u6_l = m6_l;
-    u6_u = m6_u;
-    u6   = u6_s*(u6_u - u6_l) + u6_l;
-    m6 = u6;
-    jacob_u6 = 1.0;
+    case (SMonly):
+      u6_l = m6_l;
+      u6_u = m6_u;
+      u6   = u6_s*(u6_u - u6_l) + u6_l;
+      m6 = u6;
+      jacob_u6 = 1.0;
 
-    V2     = myMC->terms[3];
-    A2     = myMC->terms[4];
-    VA     = myMC->terms[5];
-  }
-  else if(BSM == INTERFERENCE)
-  {
-  //////////////////////////////////////////////////////////
-  // BSM PROPAGATOR 
-    // long double prop = (1.0/(-2*(m6/mzprime/mzprime) - 1.0))/mzprime/mzprime;
-    u6_l = log(1.0/(2.0*m6_u + mzprime*mzprime));
-    u6_u = log(1.0/(2.0*m6_l + mzprime*mzprime));
-    u6   = u6_s*(u6_u - u6_l) + u6_l;
-    m6   = -mzprime*mzprime/2.0 + exp(-u6)/2.0;
+      V2     = myMC->terms[3];
+      A2     = myMC->terms[4];
+      VA     = myMC->terms[5];
+      break;
 
-    prop = -exp(u6);
-    jacob_u6 = exp(-u6)/2.0;
+    case (INTERFERENCE):
 
-    V2     = myMC->terms[3] * prop;
-    A2     = myMC->terms[4] * prop;
-    VA     = myMC->terms[5] * prop;
-  }
-  else if(BSM == BSMonly)
-  {    
-    u6_l = 1.0/(2.0*m6_u + mzprime*mzprime);
-    u6_u = 1.0/(2.0*m6_l + mzprime*mzprime);
-    u6   = u6_s*(u6_u - u6_l) + u6_l;
-    m6   = -mzprime*mzprime/2.0 + 1.0/2.0/u6;
+      //////////////////////////////////////////////////////////
+      // BSM PROPAGATOR 
+      // long double prop = (1.0/(-2*(m6/mzprime/mzprime) - 1.0))/mzprime/mzprime;
+      u6_l = log(1.0/(2.0*m6_u + mzprime*mzprime));
+      u6_u = log(1.0/(2.0*m6_l + mzprime*mzprime));
+      u6   = u6_s*(u6_u - u6_l) + u6_l;
+      m6   = -mzprime*mzprime/2.0 + exp(-u6)/2.0;
 
-    prop = -u6;
-    jacob_u6 = 1.0/(u6*u6)/2.0;
+      prop = -exp(u6);
+      jacob_u6 = exp(-u6)/2.0;
 
-    V2     = myMC->terms[3] * prop*prop;
-    A2     = myMC->terms[4] * prop*prop;
-    VA     = myMC->terms[5] * prop*prop;
-  }
-  else if( BSM == SMandBSM)
-  {
-    u6_l = m6_l;
-    u6_u = m6_u;
-    u6   = u6_s*(u6_u - u6_l) + u6_l;
-    m6 = u6;
-    jacob_u6 = 1.0;
+      V2     = myMC->terms[3] * prop;
+      A2     = myMC->terms[4] * prop;
+      VA     = myMC->terms[5] * prop;
+      break;
 
-    prop = 1.0/(2.0*m6 + mzprime*mzprime);
+    case (BSMonly):
 
-    V2     = (myMC->Vijk + myMC->gprimeV*myMC->gprimeV/2.0/sqrt(2.0)/Gf * myMC->CHARGE * prop)*(myMC->Vijk + myMC->gprimeV*myMC->gprimeV/2.0/sqrt(2.0)/Gf * myMC->CHARGE * prop) ;
-    A2     = (myMC->Aijk + myMC->gprimeA*myMC->gprimeA/2.0/sqrt(2.0)/Gf * myMC->CHARGE * prop)*(myMC->Aijk + myMC->gprimeA*myMC->gprimeA/2.0/sqrt(2.0)/Gf * myMC->CHARGE * prop) ;
-    VA     = (myMC->Aijk + myMC->gprimeA*myMC->gprimeA/2.0/sqrt(2.0)/Gf * myMC->CHARGE * prop)*(myMC->Vijk + myMC->gprimeV*myMC->gprimeV/2.0/sqrt(2.0)/Gf * myMC->CHARGE * prop);
+      u6_l = 1.0/(2.0*m6_u + mzprime*mzprime);
+      u6_u = 1.0/(2.0*m6_l + mzprime*mzprime);
+      u6   = u6_s*(u6_u - u6_l) + u6_l;
+      m6   = -mzprime*mzprime/2.0 + 1.0/2.0/u6;
+
+      prop = -u6;
+      jacob_u6 = 1.0/(u6*u6)/2.0;
+
+      V2     = myMC->terms[3] * prop*prop;
+      A2     = myMC->terms[4] * prop*prop;
+      VA     = myMC->terms[5] * prop*prop;
+      break;
+    
+    case (SMandBSM):
+     
+      u6_l = m6_l;
+      u6_u = m6_u;
+      u6   = u6_s*(u6_u - u6_l) + u6_l;
+      m6 = u6;
+      jacob_u6 = 1.0;
+
+      prop = 1.0/(2.0*m6 + mzprime*mzprime);
+
+      V2     = (myMC->Vijk + myMC->gprimeV*myMC->gprimeV/2.0/sqrt(2.0)/Gf * myMC->CHARGE * prop)*(myMC->Vijk + myMC->gprimeV*myMC->gprimeV/2.0/sqrt(2.0)/Gf * myMC->CHARGE * prop) ;
+      A2     = (myMC->Aijk + myMC->gprimeA*myMC->gprimeA/2.0/sqrt(2.0)/Gf * myMC->CHARGE * prop)*(myMC->Aijk + myMC->gprimeA*myMC->gprimeA/2.0/sqrt(2.0)/Gf * myMC->CHARGE * prop) ;
+      VA     = (myMC->Aijk + myMC->gprimeA*myMC->gprimeA/2.0/sqrt(2.0)/Gf * myMC->CHARGE * prop)*(myMC->Vijk + myMC->gprimeV*myMC->gprimeV/2.0/sqrt(2.0)/Gf * myMC->CHARGE * prop);
+      break;
+
+    default:
+      std::cout << "Could not determine what contributions (BSM) to include." << std::endl;
+      break;
   }
 
   long double C2 = 1.0 - m6 / E1 / E2;
@@ -955,28 +963,22 @@ std::vector<long double> DifFromIntToPhysical(const cubareal xx[], void *userdat
   ///////////////////////////////////////////////////////////////////////////////////
   // JACOBIANS AND PREFACTORS 
   dsigma *= Jacob;
+
+  // Changing units to zeptobarn = zb = 1e-45 cm^2
+  dsigma *= (GeV2_to_cm2*1e45);
   
+  myMC->xphys[0] = x1;
+  myMC->xphys[1] = x2;
+  myMC->xphys[2] = x3;
+  myMC->xphys[3] = x4;
+  myMC->xphys[4] = x5;
+  myMC->xphys[5] = x6;
+  myMC->xphys[6] = x7;
+  myMC->xphys[7] = x8;
+  myMC->xphys[8] = Enu;
+  myMC->xphys[9] = dsigma;
 
-  // Hacky way to avoid non-sensical values for the cross section below thershold
-    if (Enu <=  (SQR(ml1 + ml2) + 2*(ml1 + ml2)*Mn)/2.0/Mn  )
-  {
-    dsigma = 0.0;
-  }
-
-  std::vector<long double> xphys;
-
-  xphys.push_back(x1);
-  xphys.push_back(x2);
-  xphys.push_back(x3);
-  xphys.push_back(x4);
-  xphys.push_back(x5);
-  xphys.push_back(x6);
-  xphys.push_back(x7);
-  xphys.push_back(x8);
-  xphys.push_back(Enu);
-  xphys.push_back(dsigma);
-  
-  return xphys;
+  return 0;
 }
 
 
@@ -1168,7 +1170,12 @@ long double dsigma_dPS(int nu_alpha, int l1, int l2, int A, int Z, long double E
   // WOODS-SAXON FORM FACTOR
   sigma *= (2.0)*SQR(FF_WS(q, A))/q/s;
 
-	return sigma * GeV2_to_cm2 * Z * Z * alpha_QED / M_PI;
+
+  // Changing units to zeptobarn = zb = 1e-45 cm^2
+  sigma *= (GeV2_to_cm2*1e45);
+  
+
+	return sigma  * Z * Z * alpha_QED / M_PI;
 }
 
 
@@ -1383,7 +1390,10 @@ long double dsigma_dPS_diff(int nu_alpha, int l1, int l2, int A, int Z, long dou
   // DIRAC DIPOLE FORM FACTOR
   sigma *= SQR(F_diffractive(q*q))*2/q/s;
 
-  return sigma * GeV2_to_cm2 * alpha_QED / M_PI ;
+  // Changing units to zeptobarn = zb = 1e-45 cm^2
+  sigma *= (GeV2_to_cm2*1e45);
+
+  return sigma  * alpha_QED / M_PI ;
 }
 
 /***********************     						          ***********************************************/

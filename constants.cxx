@@ -43,13 +43,44 @@ long double NormalRand(long double mean, long double stddev)
 
 /* ********************************************************* */
 // HELPER FUNCTIONS
-int Momentum_contains_nans(const std::vector<long double> &P){
- 
-  if(P[0]!=P[0]||P[1]!=P[1]||P[2]!=P[2]||P[3]!=P[3])
+int vector3d_contains_nans(const std::vector<std::vector<std::vector<long double>>> &P){
+    for (int i = 0; i < P.size(); i++)
     {
-      return 1;
-    } 
-  return 0;
+        for (int j = 0; j < P[i].size(); j++)
+        {
+            for (int k = 0; k < P[i][j].size(); k++)
+            {           
+                if (P[i][j][k]!=P[i][j][k])
+                {
+                    return 1;
+                }
+            }
+        }
+    }
+    return 0;
+}
+int vector_of_vectors_contains_nans(const std::vector<std::vector<long double>> &P){
+    for (int i = 0; i < P.size(); i++)
+    {
+        for (int j = 0; j < P[i].size(); j++)
+        {
+            if (P[i][j]!=P[i][j])
+            {
+                return 1;
+            }
+        }
+    }
+    return 0;
+}
+int vector_contains_nans(const std::vector<long double> &P){
+    for (int i = 0; i < P.size(); i++)
+    {
+        if (P[i]!=P[i])
+        {
+            return 1;
+        }
+    }
+    return 0;
 }
 int is_nan(long double x){
   if(x!=x)
@@ -60,7 +91,7 @@ int is_nan(long double x){
 }
 
 void pretty_print(std::string CHANNEL){  
-  std::cout<<"TRIDENT CHANNEL:\n"<<CHANNEL<<"\n\n";
+  std::cout<<"Trident channel: "<<CHANNEL<<"\n\n";
 }
 
 
@@ -92,6 +123,12 @@ std::string getLastLine(std::ifstream& in)
         ;
 
     return line;
+}
+
+///////////////////////////////////////////////////////
+std::vector<std::vector<std::vector<long double>>> make_3d_vector(int z, int y, int x, long double C = 0)
+{
+    return std::vector<std::vector<std::vector<long double>>>(z, std::vector<std::vector<long double>>(y, std::vector<long double>(x, C)));
 }
 
 /////////////////////////////////////
@@ -306,5 +343,9 @@ trident_channel::trident_channel(int C){
     else{
       channel_name=nu1_name+"_to_"+nu2_name+"_"+l1_name+"_"+l2_name;
     }
+
+    ////////////////
+    // !!!!! FIX ME !!!!!!!!
+    PDG_had = 1;
 
 }

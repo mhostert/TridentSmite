@@ -19,10 +19,10 @@
 // functions for the integrands (using Czys et al formalism)
 /* -------------------------------------------------------------------------------------- */
 
-std::vector<long double> CohFromIntToPhysical_Efixed(const cubareal xx[], void *userdata);
-std::vector<long double> CohFromIntToPhysical(const cubareal xx[], void *userdata);
-std::vector<long double> DifFromIntToPhysical_Efixed(const cubareal xx[], void *userdata);
-std::vector<long double> DifFromIntToPhysical(const cubareal xx[], void *userdata);
+int CohFromIntToPhysical_Efixed(const cubareal xx[], void *MC);
+int CohFromIntToPhysical(const cubareal xx[], void *MC);
+int DifFromIntToPhysical_Efixed(const cubareal xx[], void *MC);
+int DifFromIntToPhysical(const cubareal xx[], void *MC);
 
 // Flux functions
 /* -------------------------------------------------------------------------------------- */

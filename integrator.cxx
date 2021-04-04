@@ -3,15 +3,19 @@
 
 
 // Constructor defines nu flavours, trident channel and target nucleus
-tridentMC::tridentMC(int C, int Z_arg, int A_arg, long double Mn_arg){
+tridentMC::tridentMC(int C, int Z_arg, int A_arg, long double Mn_arg, std::vector<long double> params){
   
 
+
+  // Is it an antineutrino initial state?
   if (C < 0)
   {
     C = -C;
     IS_NUBAR = 1; 
   }else{IS_NUBAR=0;}
 
+
+  // Determine the trident channel
   trident_channel channel(C);
   nu_alpha = channel.nu_alpha;
   l1 = channel.l1;
@@ -58,7 +62,6 @@ tridentMC::tridentMC(int C, int Z_arg, int A_arg, long double Mn_arg){
 
   A = A_arg;
   Z = Z_arg;
-
   Mn = Mn_arg;
 
   for (int i = 0; i < 7; ++i)
@@ -73,19 +76,29 @@ tridentMC::tridentMC(int C, int Z_arg, int A_arg, long double Mn_arg){
     else if (abs(l1) != abs(l2)) {Aijk = 1.0; Vijk = 1.0;}
     else {printf("Error! Flags for the leptons not well defined or not listed.");}
   }
-  else if (nu_alpha != abs(l1))
-  {
-    Aijk = -0.5; Vijk = -0.5 + 2*sw2;
-  }
+  else if (nu_alpha != abs(l1)){Aijk = -0.5; Vijk = -0.5 + 2*sw2;}
   else {printf("Error! Flags for the leptons not well defined or not listed.");}
 
 
-  // ANTINEUTRINO CROSS SECTION!!!
+  // ANTINEUTRINO CROSS SECTION!
   if (IS_NUBAR == 1)
   {
     Aijk = - Aijk;
   }
 
+
+  //////////
+  // BSM parameters
+  CHARGE = 1.0; // always 1 -- can redefine coupling if needed.
+  mzprime = params[1];
+  gprimeV = params[2];
+  gprimeA = params[3];
+
+  // fixed allocation for physicar vars vector 
+  xphys.resize(12, 0);
+
+  // start with no events
+  total_vegas_events = 0;
 }
 
 void tridentMC::open_flux_file(std::string flux_file, long double elow, long double eup){
@@ -107,7 +120,16 @@ void tridentMC::open_flux_file(std::string flux_file, long double elow, long dou
   {
     my_flux.clear();
     my_flux.seekg(0);
-    // std::getline(my_flux,dummyline);  // Skip header!
+
+    std::getline(my_flux,dummyline);  // Skip header!
+    my_flux.clear();
+    my_flux.seekg(0);
+    
+    if (dummyline.front() == '#')
+    {
+      std::getline(my_flux,dummyline);  // Skip header!
+    }
+
 
     while(!my_flux.eof())
     {
@@ -115,10 +137,10 @@ void tridentMC::open_flux_file(std::string flux_file, long double elow, long dou
       {
         my_flux >> line[i];
       }
-
+ 
       Evec.push_back(line[0]);
-      dPHIdE.push_back(line[ ( abs(nu_alpha)-12)/2 +1+3*IS_NUBAR]);
-    
+      dPHIdE.push_back(line[ ( abs(nu_alpha)-11)/2 +1+3*IS_NUBAR]);
+      
     }
   }
   else
@@ -130,7 +152,12 @@ void tridentMC::open_flux_file(std::string flux_file, long double elow, long dou
   Ei = 0;
 
   Emax = eup;
-  Emin = elow;
+
+  if (elow > (SQR(ml1 + ml2) + 2*(ml1 + ml2)*Mn)/2.0/Mn)
+  {
+     Emin = elow;
+  }
+  else{ Emin = (SQR(ml1 + ml2) + 2*(ml1 + ml2)*Mn)/2.0/Mn;}
 }
 
 ////////////////////////////////////////
@@ -138,14 +165,14 @@ long double tridentMC::integrate_wflux(void * integrando, int ndim){
 
   SAMPLES_FLAG = NO_SAMPLES;
 
-  // for (std::vector<int>::size_type i = 0; i < terms.size(); i++)
-  // {
-    // terms[i] = 1.0;
-  // }
-  // terms[6] = SMonly;
-  // terms[3]     = Vijk*Vijk;
-  // terms[4]     = Aijk*Aijk;
-  // terms[5]     = Vijk*Aijk;
+  for (std::vector<int>::size_type i = 0; i < terms.size(); i++)
+  {
+    terms[i] = 1.0;
+  }
+  terms[6] = SMandBSM;
+  terms[3]     = Vijk*Vijk;
+  terms[4]     = Aijk*Aijk;
+  terms[5]     = Vijk*Aijk;
   if (Emax <=  2*(SQR(ml1 + ml2) + 2*(ml1 + ml2)*Mn)/2.0/Mn  )
   {
     integral[0] = 0.0;
@@ -179,15 +206,12 @@ long double tridentMC::integrate_wflux(void * integrando, int ndim){
 long double tridentMC::integrate_wflux_wsamples(void * integrando, int ndim, std::string samplesfile){
 
 
-  SAMPLES_FLAG = PRINT_SAMPLES;
-  my_samples.open(samplesfile.c_str());
-  my_samples.precision(17);
   // turn on all contributions
   for (std::vector<int>::size_type i = 0; i < terms.size(); i++)
   {
     terms[i] = 1.0;
   }
-  terms[6] = SMonly;
+  terms[6]     = SMandBSM;
   terms[3]     = Vijk*Vijk;
   terms[4]     = Aijk*Aijk;
   terms[5]     = Vijk*Aijk;
@@ -221,8 +245,6 @@ long double tridentMC::integrate_wflux_wsamples(void * integrando, int ndim, std
   }
 
   // Close the input and output files
-
-  my_samples.close();
   my_flux.close();
 
   return integral[0];
@@ -259,10 +281,6 @@ long double tridentMC::integrate_energy(void * integrando, long double Enu, int 
 ////////////////////////////////////////
 long double tridentMC::integrate_energy_wsamples(void * integrando, long double Enu, int ndim, std::string samplesfile){
 
-  SAMPLES_FLAG = PRINT_SAMPLES;
-  my_samples.open(samplesfile.c_str());
-  my_samples.precision(17);
-
   nu_energy = Enu;
   // What component of the vector integrand to use (not applicable to use yet)
   if (nu_energy <=  2*(SQR(ml1 + ml2) + 2*(ml1 + ml2)*Mn)/2.0/Mn  )
@@ -283,9 +301,6 @@ long double tridentMC::integrate_energy_wsamples(void * integrando, long double 
     &neval, &fail, integral, error, chi2prob);
   }
 
-  // Close the input and output files
-  my_samples.close();
-  std::cout<<"DONE WITH THE FIRST INTEGRAL"<<std::endl;
   return integral[0];
 }
 
@@ -301,7 +316,7 @@ long double tridentMC::compute_total_xsec_energy(void * integrando, long double 
   {
     terms[i] = 1.0;
   }
-  terms[6] = SMonly;
+  terms[6] = SMandBSM;
   terms[3]     = Vijk*Vijk;
   terms[4]     = Aijk*Aijk;
   terms[5]     = Vijk*Aijk;
@@ -333,71 +348,45 @@ long double tridentMC::compute_total_xsec_energy(void * integrando, long double 
   return integral[0];
 }
 
-
 ///////////////////////////////////////////////////////////////////////////////////////////////////////////
-void tridentMC::generate_events(std::string samplesfile, std::string eventsfile)
+int tridentMC::compute_P_LAB()
 {
-
-  ///////////////////////////////////////////////////////
-  // READING SAMPLES FILE A
-  std::ifstream ifile(samplesfile.c_str());
-  ifile.precision(17);
-  std::cout<<"reading integration file..."<<samplesfile.c_str()<<std::endl;
-
-  long double x1,x2,x3,x4,x5,x6,x7,x8,x9,w,f,prob;
+  long double Enu,Q2,w,f;
   int iter,maxiter;
 
-  // Get the last number of iterations
-  std::string line;
-  if (ifile.is_open())
-  {
-    line = getLastLine(ifile);
-    std::istringstream iss(line);
-    iss >> x1 >> x2 >> x3 >> x4 >> x5 >> x6 >> x7 >> x8 >> x9 >> f >> w >> iter;
-  }
-  else{
-    std::cout << "ERROR! Not able to read integration file." << std::endl;
-  }
+  // last vegas iteration
+  maxiter = (int) cuba_samples.back().back();
 
-  maxiter = iter;
+  // total number of events in vegas
+  total_vegas_events = cuba_samples.size();
 
+  vector3d_of_P.resize(total_vegas_events);
+  // total_vegas_events = make_3d_vector(int z, int y, int x, long double C = 0)
   //////////////////////////////////////////////////////////
   // WRITING EVENT FILES WITH WEIGHT
-
   std::vector<long double> sums(maxiter,0), sums2(maxiter,0), norm(maxiter,0);
   std::vector<int> evals(maxiter,0);
   std::vector<long double> avg(maxiter,0),std(maxiter,0);
 
-
-  // Start reading file again
-  ifile.clear();
-  ifile.seekg(0);
-
-  while(std::getline(ifile,line))
+  for(int i =0; i< total_vegas_events; i++)
   {
-    
-    std::istringstream iss(line);
-    if(!(iss >> x1 >> x2 >> x3 >> x4 >> x5 >> x6 >> x7 >> x8 >> x9 >> f >> w >> iter))
-    {
-      // NaN's in the sample file.
-      continue;
-      // FIX ME -- add a measure of NaNs here too.
-
-    }
+    iter = cuba_samples[i].back();
+    f = cuba_samples[i][9];
+    w = cuba_samples[i][10];
 
     if (iter <= maxiter)
     {
-      sums[iter-1] += (f*w);
-      sums2[iter-1] += (f*w)*(f*w);
-      evals[iter-1]++;
-      // norm[iter-1]+= 1.0/w;
-    }else std::cout << "ERROR! Iter is greater than the maximum found." <<std::endl;
+      sums[iter-1] += f*w; // real weight
+      sums2[iter-1] += (f*f*w*w); 
+      evals[iter-1]++;      // norm[iter-1]+= 1.0/w;
+    }
+    else std::cout << "ERROR! Iter is greater than the maximum found." <<std::endl;
   }
 
   long double avg_f = 0.0;
   long double std_f = 0.0;
 
-  for (int i = 0; i < maxiter; ++i)
+  for (int i = 0; i < maxiter; i++)
   {
     avg[i] = sums[i];
     std[i] = ((evals[i])*sums2[i]-(sums[i])*(sums[i]))/(evals[i]-1);
@@ -407,187 +396,162 @@ void tridentMC::generate_events(std::string samplesfile, std::string eventsfile)
 
   }
 
+  // computing the correction factor
   std_f = 1.0/(std_f);
   avg_f *= std_f;
+  weight_correction = std_f / (std[iter-1]);
+  std::cout<<"correction: "<< std::endl;
   
-  // Start reading file again
-  ifile.clear();
-  ifile.seekg(0);
 
+  int count_nans = 0;
+
+  for (int i = 0; i < total_vegas_events; i++)
+  {
+      vector3d_of_P[i] = P_LAB(ml1/*l-*/, ml2/*l-*/, Mn, cuba_samples[i]);
+
+      f = cuba_samples[i][9];
+      w = cuba_samples[i][10];
+      Enu = cuba_samples[i][8];
+      Q2 = cuba_samples[i][0];
+
+      // destroy NaN entries and record 
+      if ( (vector3d_contains_nans(vector3d_of_P)) || (is_nan(Q2)) || (is_nan(Enu)) || (is_nan(f*w * std_f / (std[iter-1]))) )
+      {
+        vector3d_of_P[i].clear();
+        count_nans++;
+      }
+    }
+  
+  std::cout<<"Total number of events: "<<total_vegas_events<<std::endl;
+  std::cout<<"Number of NaNed events: "<<count_nans<<std::endl;
+
+  return 0;
+}
+
+///////////////////////////////////////////////////////////////////////////////////////////////////////////
+int tridentMC::generate_events(std::string eventsfile)
+{
 
   //////////////////////////////////////////////////////////
   // WRITING EVENT FILES WITH WEIGHTS  
-
   std::ofstream outfile(eventsfile.c_str());
   std::cout<<"opening new eventsfile..."<<eventsfile.c_str()<<std::endl;
   outfile.precision(17);
 
-
-  outfile <<"# MC events with uniform energy profile. All units are in GeV or GeV^2. "<<std::endl;
+  outfile <<"# Units of GeV for momenta and (zb = 1e-45 cm^2)*(neutrino flux units) for the weights."<<std::endl;
   outfile <<"# Enu Q^2 P+(0) P+(1) P+(2) P+(3) P-(0) P-(1) P-(2) P-(3) weight"<<std::endl;
 
-  // Must have the same number of entries as columns in the sampes#.txt file!!
-  std::vector<long double> row(9);
-  long double mj = ml1; // l-
-  long double mk = ml2; // l+
-  std::vector<long double> Pm(4), Pp(4);
 
-
-  int count_nans = 0;
-  int counter2 = 0;
-
-  while(std::getline(ifile,line))
+  long double Enu,Q2,w,f;
+  for (int i = 0; i < total_vegas_events; i++)
   {
-    std::istringstream iss(line);
-    iss >> x1 >> x2 >> x3 >> x4 >> x5 >> x6 >> x7 >> x8 >> x9 >> f >> w >> iter;
+   
+    // still want to print some low level information to file
+    f = cuba_samples[i][9];
+    w = cuba_samples[i][10];
+    Enu = cuba_samples[i][8];
+    Q2 = cuba_samples[i][0];
 
-    // if (itmaxitermaxitermaxitermaxiterer == maxiter)
-    {
-      row[0] = x1;
-      row[1] = x2;
-      row[2] = x3;
-      row[3] = x4;
-      row[4] = x5;
-      row[5] = x6;
-      row[6] = x7;
-      row[7] = x8;
-      row[8] = x9;
-
-      /////////////////////////////////////////////////
-      // get the 4-momenta
-      Pm = P_minus_LAB(mj, mk, Mn, row);
-      Pp = P_plus_LAB(mj, mk, Mn, row);
-      // Pm = P_minus_Sframe(mj, mk, Mn, row);
-      // Pp = P_plus_Sframe(mj, mk, Mn, row);
-
-
-      if (!Momentum_contains_nans(Pp) && !Momentum_contains_nans(Pm) && !(is_nan(x1)) && !(is_nan(x9)) && !(is_nan(f*w * std_f / (std[iter-1]))) )
-      {
-
-        // if (counter2 >= NSTART)
-        {
-        //   /* code */
-            outfile << x9 /*Enu*/  << " "
-            << x1  /*Q^2*/ << " "
-            << Pp[0]<< " "
-            << Pp[1]<< " "
-            << Pp[2]<< " "
-            << Pp[3]<< " "
-            << Pm[0]<< " "
-            << Pm[1]<< " "
-            << Pm[2]<< " "
-            << Pm[3]<< " "
-            << f*w * std_f / (std[iter-1])  << std::endl;
-
-        }
-        counter2+=1;
-      }
-      else{count_nans++;}
+    outfile << Enu  << " "
+    << Q2 << ""
+    << vector3d_of_P[i][0][0]<< " " // Pnu
+    << vector3d_of_P[i][0][1]<< " " // Pnu
+    << vector3d_of_P[i][0][2]<< " " // Pnu
+    << vector3d_of_P[i][0][3]<< " " // Pnu
+    << vector3d_of_P[i][1][0]<< " " // Pplus
+    << vector3d_of_P[i][1][1]<< " " // Pplus
+    << vector3d_of_P[i][1][2]<< " " // Pplus
+    << vector3d_of_P[i][1][3]<< " " // Pplus
+    << vector3d_of_P[i][2][0]<< " " // Pminus
+    << vector3d_of_P[i][2][1]<< " " // Pminus
+    << vector3d_of_P[i][2][2]<< " " // Pminus
+    << vector3d_of_P[i][2][3]<< " " // Pminus 
+    << f*w*weight_correction << std::endl;
 
     }
-  }
 
-  ifile.close();
   outfile.close();
-  
-  std::cout<<"Number of printed events: "<<counter2<<std::endl;
-  std::cout<<"Number of NaNed events: "<<count_nans<<std::endl;
-  std::cout<<"Written to observables file."<< std::endl;
+  std::cout<<"Written vegas events to file."<< std::endl;
 
-  ///////////////////////////////////
-  // REMOVE integration samples file
-  remove(samplesfile.c_str());
+  return 0;
 }
 
 ///////////////////////////////////////////////////////////////////////////////////////////////////////////
-void tridentMC::HEPevt_format(std::string eventsfile, std::string HEPevtfile, int NUMBER_OF_EVENTS)
+int tridentMC::HEPevt_format(std::string HEPevtfile, int NUMBER_OF_EVENTS)
 {
   ///////////////////////////////////////////////////////
   // READING SAMPLES FILE A
-  std::ifstream ifile(eventsfile.c_str());
-  ifile.precision(17);
-  std::cout<<"reading events file..."<<eventsfile.c_str()<<std::endl;
-  long double E,Q2,pp0,pp1,pp2,pp3,pm0,pm1,pm2,pm3,wf;
+  long double Enu,Q2,wf;
   
   int line_count=0;
   long double sum_wf = 0;
 
-  // Get the last number of iterations
-  std::string line,dummyline;
-  
-  if (ifile.is_open())
+  for (int i = 0; i < total_vegas_events; i++)
   {
-    std::getline(my_flux, dummyline);  // Skip header!
-    std::getline(my_flux, dummyline);  // Skip header!
-
-    while(std::getline(ifile,line))
-    {
-      std::istringstream iss(line);
-  
-      iss >> E >> Q2 >> pp0 >> pp1 >> pp2 >> pp3 >> pm0 >> pm1 >> pm2 >> pm3 >> wf;
-      if (sum_wf<wf)
-      {
-        sum_wf = wf;
-      }
-
-      line_count++;
-    }
+    sum_wf += cuba_samples[i].back();
   }
-  else{
-    std::cout << "ERROR! Not able to open events file." << std::endl;
-  }
-
-  std::cout<<"Max weight = "<<sum_wf<<std::endl;
+  std::cout<<"Total integral from events = "<<sum_wf<<std::endl;
   //////////////////////////////////////////////////////////
 
-  // WRITING EVENT FILES AFTER ACCEPT/REJECT
-
+  // WRITING EVENTS TO FILE AFTER ACCEPT/REJECT
   std::ofstream outfile(HEPevtfile.c_str());
   std::cout<<"opening HEPevtfile..."<<HEPevtfile.c_str()<<std::endl;
   outfile.precision(17);
 
-  // Start reading file again
-  ifile.clear();
-  ifile.seekg(0);
-  std::getline(my_flux, dummyline);  // Skip header!
-  std::getline(my_flux, dummyline);  // Skip header!
-
   int i = 0;
   while (i < NUMBER_OF_EVENTS)
   {
-      if(std::getline(ifile,line))
-      {
-        std::istringstream iss(line);
-        if(!(iss >> E >> Q2 >> pp0 >> pp1 >> pp2 >> pp3 >> pm0 >> pm1 >> pm2 >> pm3 >> wf)){
-          // std::cout<<E <<" "<< Q2 <<" "<< pp0 <<" "<< pp1 <<" "<< pp2 <<" "<< pp3 <<" "<< pm0 <<" "<< pm1 <<" "<< pm2 <<" "<< pm3 <<" "<< wf<<std::endl;
-          continue;
-        }
-
-        if ( wf/sum_wf > UniformRand() )
-        {
-          // FIX ME -- INCLUDE THE STRUCK HADRON!
-          outfile <<i<<" "<<3<<std::endl;
-          outfile <<"1 "<<PDG_nu_inc<<" 0 0 0 0 "<<E<<" 0.0 0.0 "<<E<<" 0.0 0.0 0.0 0.0 0.0"<<std::endl;
-          outfile <<"2 "<<PDG_lp<<" 0 0 0 0 "<<pp0<<" "<<pp1<<" "<<pp2<<" "<<pp3<<" "<<ml2<<" 0.0 0.0 0.0 0.0"<<std::endl;
-          outfile <<"2 "<<PDG_lm<<" 0 0 0 0 "<<pm0<<" "<<pm1<<" "<<pm2<<" "<<pm3<<" "<<ml1<<" 0.0 0.0 0.0 0.0"<<std::endl;
-          i++;
-        }
-      }
-      else
-      { 
-        ifile.clear();
-        ifile.seekg(0);
-        std::getline(my_flux, dummyline);  // Skip header!
-        std::getline(my_flux, dummyline);  // Skip header!
-
-      }
+    wf = cuba_samples[i].back();
+    // Accept/reject to  
+    if ( wf/sum_wf > UniformRand() )
+    {
+      
+      Enu = cuba_samples[i][8];
+      
+      // event header
+      outfile <<i<<" "<<5<<std::endl;
+      // incoming neutrino
+      outfile <<"0 "<<PDG_nu_inc<<" 0 0 0 0 "<<Enu<<" 0.0 0.0 "<<Enu
+                                            <<" 0.0 0.0 0.0 0.0 0.0"<<std::endl;
+      /////////////////////////////////////////////////
+      // !!!! FIX ME -- FIX THE TARGET HADRON INFO !!!!!
+      outfile <<"0 "<<PDG_lm<<" 0 0 0 0 "<<vector3d_of_P[i][2][0]<<" "
+                                          <<vector3d_of_P[i][2][1]<<" "
+                                          <<vector3d_of_P[i][2][2]<<" "
+                                          <<vector3d_of_P[i][2][3]<<" "
+                                          <<ml1<<" 0.0 0.0 0.0 0.0"<<std::endl;
+      // outgoing neutrino
+      outfile <<"1 "<<PDG_nu_out<<" 0 0 0 0 "<<vector3d_of_P[i][0][0]<<" "
+                                          <<vector3d_of_P[i][0][1]<<" "
+                                          <<vector3d_of_P[i][0][2]<<" "
+                                          <<vector3d_of_P[i][0][3]<<
+                                          " 0.0 0.0 0.0 0.0 0.0"<<std::endl;
+      // positive charged lepton
+      outfile <<"1 "<<PDG_lp<<" 0 0 0 0 "<<vector3d_of_P[i][1][0]<<" "
+                                          <<vector3d_of_P[i][1][1]<<" "
+                                          <<vector3d_of_P[i][1][2]<<" "
+                                          <<vector3d_of_P[i][1][3]<<" "
+                                          <<ml2<<" 0.0 0.0 0.0 0.0"<<std::endl;
+      // negative charged lepton
+      outfile <<"1 "<<PDG_lm<<" 0 0 0 0 "<<vector3d_of_P[i][2][0]<<" "
+                                          <<vector3d_of_P[i][2][1]<<" "
+                                          <<vector3d_of_P[i][2][2]<<" "
+                                          <<vector3d_of_P[i][2][3]<<" "
+                                          <<ml1<<" 0.0 0.0 0.0 0.0"<<std::endl;
+      /////////////////////////////////////////////////
+      // !!!! FIX ME -- FIX THE STRUCK HADRON INFO !!!!!
+      outfile <<"1 "<<PDG_lm<<" 0 0 0 0 "<<vector3d_of_P[i][2][0]<<" "
+                                          <<vector3d_of_P[i][2][1]<<" "
+                                          <<vector3d_of_P[i][2][2]<<" "
+                                          <<vector3d_of_P[i][2][3]<<" "
+                                          <<ml1<<" 0.0 0.0 0.0 0.0"<<std::endl;
+      i++;
+    }
+      
   }
   
-  ifile.close();
   outfile.close();
-  
-  ///////////////////////////////////
-  // REMOVE original events file
-  remove(eventsfile.c_str());
+
+  return 0;
 }
 

@@ -77,7 +77,7 @@
 #define alpha_QED 1.0/137.035 // Fine structure constant
 #define alphaQED 1.0/137.035 // Fine structure constant
 
-#define sw2 0.2223 // sin of Weinber angle squared
+#define sw2 0.2223 // sin of Weinberg angle squared
 #define gweak 8*Gf/sqrt(2)*mW*mW
 #define gL sw2 - 1.0/2.0
 #define gR sw2
@@ -115,7 +115,7 @@ inline long double SQR(long double x) { return x*x; }
 
 inline long double heaviside(long double x) { return 1.0*(x > 0.0); }
 
-									// x = |Q|
+// x = |Q|
 inline long double G_dip(long double x) { return SQR( 1.0 / (1.0 + SQR(x/MV) ) ); }// Recall q = sqrt(-q^2) = |Q^2|, so tau = -|Q|^2/4M^2
 
 /* ********************************************************* */
@@ -141,8 +141,6 @@ inline long double G_dip(long double x) { return SQR( 1.0 / (1.0 + SQR(x/MV) ) )
 #define GRIDNO 		0
 #define STATEFILE 	NULL
 #define SPIN 		NULL
-
-#define SKIP_PRINTS 0.9 // print integrand after SKIP_PRINTS of evaluations
 
 // SUAVE ARGUMENTS --> Not tested yet (14/12)
 #define NNEW 1e4
@@ -179,13 +177,16 @@ long double UniformRand();
 long double NormalRand(long double mean, long double stddev);
 
 // Does it have nans?
+int vector3d_contains_nans(const std::vector<std::vector<std::vector<long double>>> &P);
+int vector_of_vectors_contains_nans(const std::vector<std::vector<long double>> &P);
+int vector_contains_nans(const std::vector<long double> &P);
 int is_nan(long double x);
-int Momentum_contains_nans(const std::vector<long double> &P);
 
 // strings and printing
 void pretty_print(std::string CHANNEL);
 std::vector<std::string> list_of_trident_channels(std::vector<std::string> &sList);
 std::string getLastLine(std::ifstream& in);
+std::vector<std::vector<std::vector<long double>>> make_3d_vector(int z, int y, int x, long double C);
 
 
 class trident_channel{
